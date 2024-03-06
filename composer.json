@@ -1,0 +1,35 @@
+{
+  "name": "xwoo/data-type",
+  "license": "GPL-2.0",
+  "type": "library",
+  "authors": [
+    {
+      "name": "Sibin Grasic",
+      "email": "sibin.grasic@oblak.studio"
+    }
+  ],
+  "require": {
+    "php": ">= 8.0",
+    "oblak/wp-polyfills": "^1.1"
+  },
+  "require-dev": {
+    "oblak/wordpress-coding-standard": "^1.0"
+  },
+  "suggest": {
+    "automattic/jetpack-autoloader": "Allow for better interoperability with other plugins that use this package."
+  },
+  "autoload": {
+    "psr-4": {
+      "XWC\\": "src",
+      "\\": "lib"
+    },
+    "files": [
+      "src/Functions/xwc-data-types.php"
+    ]
+  },
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    }
+  }
+}
