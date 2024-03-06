@@ -1,11 +1,27 @@
 <?php
 /**
- * Data types utility functions
+ * Functions for managing data types.
  *
  * @package Data Types
  */
 
 use XWC\Data_Type;
+
+/**
+ * Get a list of registered data types.
+ *
+ * @param  array  $args     Optional. Array of arguments for filtering the list of data types.
+ * @param  string $output   Optional. The type of output to return. Accepts 'names' or 'objects'.
+ * @param  string $operator Optional. The logical operation to perform. Accepts 'or' or 'and'.
+ * @return array<int, Data_Type|string> An array of data type names or objects.
+ */
+function xwc_get_data_types( array $args = array(), string $output = 'names', string $operator = 'and' ): array {
+    global $xwc_data_types;
+
+    $field = 'names' === $output ? 'name' : false;
+
+    return wp_filter_object_list( $xwc_data_types, $args, $operator, $field );
+}
 
 /**
  * Get a data type object.
@@ -17,6 +33,16 @@ function xwc_get_data_type_object( string $type ): ?Data_Type {
     global $xwc_data_types;
 
     return $xwc_data_types[ $type ] ?? null;
+}
+
+/**
+ * Determine if a data type is registered.
+ *
+ * @param  string $type Data type.
+ * @return bool
+ */
+function xwc_data_type_exists( string $type ): bool {
+    return (bool) xwc_get_data_type_object( $type );
 }
 
 /**
@@ -127,60 +153,4 @@ function xwc_register_taxonomy_for_data_type( string $taxonomy, string $data_typ
 	do_action( 'xwc_registered_taxonomy_for_data_type', $taxonomy, $data_type );
 
 	return true;
-}
-
-/**
- * Add support for a feature to a data type.
- *
- * @param string $data_type Data type.
- * @param string $feature   Feature being added.
- * @param mixed  ...$args   Optional additional arguments for the feature.
- */
-function xwc_add_data_type_support( string $data_type, string $feature, mixed ...$args ) {
-    global $_xwc_data_type_features;
-
-    $_xwc_data_type_features ??= array();
-
-    $features = (array) $feature;
-	foreach ( $features as $feature ) {
-        $args = $args ? $args : true;
-
-        if ( is_array( $args[0] ?? 'no' ) ) {
-            $args = $args[0];
-        }
-
-		$_xwc_data_type_features[ $data_type ][ $feature ] = $args;
-	}
-}
-
-/**
- * Checks if a data type supports a feature.
- *
- * @param  string $data_type Data type.
- * @param  string $feature   Feature being checked.
- * @return bool              True if the feature is supported, false if not.
- */
-function xwc_data_type_supports( string $data_type, string $feature ): bool {
-    global $_xwc_data_type_features;
-
-    $_xwc_data_type_features ??= array();
-
-    return isset( $_xwc_data_type_features[ $data_type ][ $feature ] );
-}
-
-
-/**
- * Get a feature from a data type.
- *
- * @param  string $data_type Data type.
- * @param  string $feature   Feature name.
- * @param  mixed  $def       Default value.
- * @return mixed
- */
-function xwc_data_type_get_feature( string $data_type, string $feature, mixed $def = false ): mixed {
-    global $_xwc_data_type_features;
-
-    $_xwc_data_type_features ??= array();
-
-    return $_xwc_data_type_features[ $data_type ][ $feature ] ?? $def;
 }

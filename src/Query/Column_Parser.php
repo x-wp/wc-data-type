@@ -49,9 +49,12 @@ class Column_Parser implements Clause_Parser {
      */
     protected array $column_vars;
 
+    protected string $column_prefix;
+
     protected bool $has_search = false;
 
     public function __construct( Query_Var_Handler &$qv ) {
+        $this->column_prefix  = $qv->column_prefix;
         $this->column_vars    = $qv->column_vars;
         $this->table_columns  = \array_keys( $this->column_vars );
         $this->search_columns = $qv->search_columns;
@@ -124,7 +127,7 @@ class Column_Parser implements Clause_Parser {
                 continue;
             }
 
-            $normalized[ $column ] = $qv[ $var ];
+            $normalized[ $this->column_prefix . $column ] = $qv[ $var ];
         }
 
         return $normalized;

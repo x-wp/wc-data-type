@@ -7,6 +7,7 @@
 
 namespace XWC;
 
+use XWC\Interfaces\Entity;
 use XWC\Traits\Data_Type_Meta;
 
 /**
@@ -29,7 +30,7 @@ use XWC\Traits\Data_Type_Meta;
  *  - `array_raw` - an array which will always be saved as a comma separated string
  *  - `binary`    - A hex string which will be converted to binary when saved to the database
  */
-abstract class Data extends \WC_Data {
+abstract class Data extends \WC_Data implements Entity {
     use Data_Type_Meta;
 
     /**

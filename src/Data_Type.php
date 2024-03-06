@@ -40,6 +40,13 @@ final class Data_Type {
     private string $id_field;
 
     /**
+     * Column prefix.
+     *
+     * @var string
+     */
+    private string $column_prefix;
+
+    /**
      * Data type table prefix.
      *
      * @var string
@@ -215,7 +222,7 @@ final class Data_Type {
 
         $this->validate_args( $args );
 
-        $this->table        = $this->set_table( $args['table'] ?? false );
+        $this->table        = $this->set_table( $args['table'] );
         $this->table_prefix = $this->set_table_prefix( $args['table_prefix'] ?? $args['table'] );
         $this->data_store   = $this->set_data_store( $args['data_store'] ?? false );
         $this->object_type  = $this->set_object_type( $args['object_type'] ?? $this->name );
@@ -227,7 +234,8 @@ final class Data_Type {
         $this->query_vars   = $this->set_query_vars( $args['query_vars'] ?? null );
         $this->supports     = $this->set_supports( $args['supports'] ?? null );
 
-        $this->id_field = $args['id_field'] ?? 'ID';
+        $this->id_field      = $args['id_field'] ?? 'ID';
+        $this->column_prefix = $args['column_prefix'] ?? '';
     }
 
     /**
@@ -264,8 +272,12 @@ final class Data_Type {
      * @param  string|false $table Table name.
      * @return string
      */
-    private function set_table( string|false $table ): string {
-        return $GLOBALS['wpdb']->$table;
+    private function set_table( string $table ): string {
+        global $wpdb;
+
+        return \str_starts_with( $table, $wpdb->prefix ) || \str_starts_with( $table, '{{PREFIX}}' )
+            ? \str_replace( '{{PREFIX}}', $wpdb->prefix, $table )
+            : $wpdb->$table;
     }
 
     /**

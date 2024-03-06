@@ -319,7 +319,7 @@ class Data_Query implements Query_Interface {
      * @param  Query_Var_Handler $q       The query variables.
      */
     protected function init_parsers( array &$clauses, Query_Var_Handler &$q ) {
-        foreach ( $this->get_parsers() as $query => $data ) {
+        foreach ( $this->get_parsers( $q ) as $query => $data ) {
             if ( ! $q->needs_parser( $query ) ) {
                 continue;
             }
@@ -335,11 +335,12 @@ class Data_Query implements Query_Interface {
     /**
      * Get the parsers.
      *
+     * @param  Query_Var_Handler $q The query variables.
      * @return array<string, array{action: string, class: class-string<Clause_Parser>}>
      */
-    protected function get_parsers() {
+    protected function get_parsers( Query_Var_Handler $q ) {
         // phpcs:ignore SlevomatCodingStandard.Arrays
-        return array(
+        $parsers = array(
             'cols'    => array(
                 'action' => 'append',
                 'class'  => Query\Column_Parser::class,
@@ -365,6 +366,18 @@ class Data_Query implements Query_Interface {
                 'class'  => Query\Orderby_Parser::class,
             ),
         );
+
+        /**
+         * Filters the query parsers.
+         *
+         * @param  array             $parsers The query parsers.
+         * @param  Query_Var_Handler $qv      The query variables.
+         *
+         * @return array
+         *
+         * @since 1.1.0
+         */
+        return \apply_filters( 'wcx_data_query_parsers', $parsers, $q );
     }
 
     /**

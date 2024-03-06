@@ -14,6 +14,7 @@ use XWC\Traits\Data_Type_Meta;
  * @property-read array|false $taxonomies     Taxonomies.
  * @property-read array       $columns        Columns.
  * @property-read array       $search_columns Searchable columns.
+ * @property-read string      $column_prefix  Column prefix.
  */
 #[\AllowDynamicProperties]
 class Vars implements Query_Var_Handler {
@@ -99,6 +100,7 @@ class Vars implements Query_Var_Handler {
             'search_columns',
             'date_columns',
             'column_vars',
+            'column_prefix',
         );
     }
 
@@ -240,7 +242,7 @@ class Vars implements Query_Var_Handler {
     public function get_features(): array {
         return \array_merge(
             array( 'cols', 'orderby', 'limit' ),
-            \array_keys( \xwc_data_type_get_feature( $this->data_type, 'query' ) ),
+            \array_keys( \xwc_data_type_get_supports( $this->data_type, 'query' ) ),
         );
     }
 

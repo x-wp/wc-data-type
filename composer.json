@@ -24,7 +24,9 @@
       "\\": "lib"
     },
     "files": [
-      "src/Functions/xwc-data-types.php"
+      "src/Functions/xwc-data-type-core.php",
+      "src/Functions/xwc-data-type-supports.php",
+      "src/Functions/xwc-data-type-taxonomy.php"
     ]
   },
   "config": {

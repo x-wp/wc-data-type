@@ -7,6 +7,7 @@
 
 namespace XWC;
 
+use XWC\Interfaces\Object_Query as Object_Query_Interface;
 use XWC\Traits\Data_Type_Meta;
 
 /**
@@ -14,7 +15,7 @@ use XWC\Traits\Data_Type_Meta;
  *
  * Extended by classes to provide a consistent way to query objects.
  */
-abstract class Object_Query {
+abstract class Object_Query implements Object_Query_Interface {
     use Data_Type_Meta;
 
     /**
@@ -68,7 +69,7 @@ abstract class Object_Query {
     /**
      * Get the default query vars.
      */
-    protected function get_default_query_vars() {
+    protected function get_default_query_vars(): array {
         return array(
             'data_type' => $this->get_data_type(),
             'limit'     => \get_option( "{$this->data_type}_per_page", \get_option( 'posts_per_page', 20 ) ),
@@ -86,7 +87,7 @@ abstract class Object_Query {
      *
      * @return array<int, Data|int>|object
      */
-    public function get_objects() {
+    public function get_objects(): array|object {
         $filter_prefix = "xwc_{$this->data_type}_object_query";
 
         // Documented in WooCommerce.
