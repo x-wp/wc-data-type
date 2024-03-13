@@ -52,7 +52,7 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
      *
      * @var array<string, string>
      */
-    protected array|false $taxonomies;
+    protected array|false $term_props;
 
     /**
      * Array of updated props
@@ -96,14 +96,14 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
     // phpcs:ignore Squiz.Commenting
     protected function get_metadata_keys(): array {
         return array(
+            'id_field',
             'table',
             'table_prefix',
-            'id_field',
             'meta_type',
             'internal_meta_keys',
             'must_exist_meta_keys',
             'meta_key_to_props',
-            'taxonomies',
+            'term_props',
             'query_vars',
         );
     }
@@ -420,24 +420,6 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
         return $qv;
     }
 
-    //phpcs:ignore Squiz.Commenting
-    public function get_entities( $args = array(), $clause_join = 'AND' ) {
-        \_doing_it_wrong( __METHOD__, 'Use query() instead.', '1.0.0' );
-        return $this->query( $args );
-    }
-
-    //phpcs:ignore Squiz.Commenting
-    public function get_entity_count( $args = array(), $clause_join = 'AND' ) {
-        \_doing_it_wrong( __METHOD__, 'Use count() instead.', '1.0.0' );
-        return $this->count( $args );
-    }
-
-    //phpcs:ignore Squiz.Commenting
-    public function get_entity( $args, $clause_join = 'AND' ) {
-        \_doing_it_wrong( __METHOD__, 'Use query() instead.', '1.0.0' );
-        return null;
-    }
-
     /**
      * Get the lookup table for the data store.
      *
@@ -475,16 +457,17 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
         $meta_values = \array_map(
             static fn( $mv ) => \maybe_unserialize( $mv[0] ),
             \array_intersect_key(
-                \get_metadata( $this->get_data_type(), $object_id ),
+                \get_metadata( $this->meta_type, $object_id ),
                 $this->meta_key_to_props,
             ),
         );
+        $meta_values = \array_combine(
+            \array_map( fn( $v ) => $this->meta_key_to_props[ $v ], \array_keys( $meta_values ) ),
+            \array_values( $meta_values ),
+        );
 
         $set_props = \array_merge(
-            \array_combine(
-                \array_intersect_key( $this->meta_key_to_props, $meta_values ),
-                $meta_values,
-            ),
+            $meta_values,
             $this->read_entity_terms( $object_id ),
         );
 
@@ -498,13 +481,13 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
      * @return array<string, array<int, string>>
      */
     protected function read_entity_terms( int $object_id ): array {
-        if ( ! $this->taxonomies ) {
+        if ( ! $this->term_props ) {
             return array();
         }
 
         $props = array();
 
-        foreach ( $this->taxonomies as $term_prop => $taxonomy ) {
+        foreach ( $this->term_props as $term_prop => $taxonomy ) {
             $props[ $term_prop ] = $this->get_term_ids( $object_id, $taxonomy );
         }
 
@@ -521,7 +504,7 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
             try {
                 $data->{"set_{$key}"}(
                     \get_metadata(
-                        $this->get_data_type(),
+                        $this->meta_type,
                         $data->get_id(),
                         '_' . $key,
                         true,
@@ -619,11 +602,11 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
      * @param bool    $force  Force update. Used during create.
      */
     protected function update_terms( &$the_object, $force = false ) {
-        if ( ! $this->taxonomies ) {
+        if ( ! $this->term_props ) {
             return;
         }
 
-        $props   = $this->taxonomies;
+        $props   = $this->term_props;
         $changes = \array_intersect_key( $the_object->get_changes(), $props );
 
         // If we don't have term props or there are no changes, and we're not forcing an update, return.

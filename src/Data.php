@@ -29,6 +29,8 @@ use XWC\Traits\Data_Type_Meta;
  *  - `array`     - an array which will be either imploded for a core key, or serialized for a meta key
  *  - `array_raw` - an array which will always be saved as a comma separated string
  *  - `binary`    - A hex string which will be converted to binary when saved to the database
+ *
+ * @method Data_Store get_data_store() Get the data store.
  */
 abstract class Data extends \WC_Data implements Entity {
     use Data_Type_Meta;
@@ -85,6 +87,15 @@ abstract class Data extends \WC_Data implements Entity {
     protected array $core_data = array();
 
     /**
+     * Array of term data keys.
+     *
+     * Term data keys are the keys which are linked to taxonomies.
+     *
+     * @var array
+     */
+    protected array $term_data = array();
+
+    /**
      * Keys that should be unique.
      *
      * @var array<int, string>
@@ -120,9 +131,10 @@ abstract class Data extends \WC_Data implements Entity {
     protected function get_metadata_keys(): array {
 		return array(
             'id_field',
-			'prop_types',
 			'core_data',
+            'term_data',
 			'data',
+			'prop_types',
 			'cache_group',
 			'meta_type',
 			'object_type',
@@ -146,7 +158,12 @@ abstract class Data extends \WC_Data implements Entity {
      * @param  int|Data|object $data Package to init.
      */
     protected function load_data( int|Data|\stdClass|array $data ) {
-        $this->data         = \array_merge( $this->core_data, $this->data, $this->extra_data );
+        $this->data         = \array_merge(
+            $this->core_data,
+            $this->data,
+            $this->term_data,
+            $this->extra_data,
+        );
 		$this->default_data = $this->data;
 
         $id_field = $this->id_field;
