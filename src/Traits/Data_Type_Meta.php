@@ -43,7 +43,7 @@ trait Data_Type_Meta {
         $dto = \xwc_get_data_type_object( $dt );
 
         foreach ( $this->get_metadata_keys() as $prop ) {
-            static::$metadata[ $dt ][ $prop ] ??= $dto->{"get_$prop"}() ?? $dto->$prop;
+            static::$metadata[ $dt ][ $prop ] ??= $dto->$prop;
 
             if ( ! $set_props ) {
                 continue;
@@ -51,18 +51,5 @@ trait Data_Type_Meta {
 
             $this->$prop = &static::$metadata[ $dt ][ $prop ];
         }
-    }
-
-    /**
-     * Get metadata for the data type.
-     *
-     * @param  string $name Metadata key.
-     */
-    protected function get_data_type_meta( string $name ) {
-        if ( ! \in_array( $name, $this->get_metadata_keys(), true ) ) {
-            return null;
-        }
-
-        return static::$metadata[ $this->data_type ][ $name ];
     }
 }

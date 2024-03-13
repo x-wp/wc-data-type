@@ -280,6 +280,21 @@ class Data_Query implements Query_Interface {
     }
 
     /**
+     * Retrieves a single object based on query variables.
+     *
+     * @since 1.5.0
+     *
+     * @return Data|int|null The object or ID.
+     */
+    public function get_object(): Data|int|null {
+        $this->get_objects();
+
+        return \is_array( $this->objects ) && \count( $this->objects ) > 0
+            ? $this->objects[0]
+            : ( 'ids' === $this->vars['fields'] ? 0 : null );
+    }
+
+    /**
      * Count the number of objects in the query.
      *
      * @return int
@@ -415,9 +430,7 @@ class Data_Query implements Query_Interface {
      * @param  Query_Var_Handler $q       The query variables.
      */
     protected function init_paging( array &$clauses, Query_Var_Handler &$q ) {
-        $page = 1;
-
-        if ( $q['nopaging'] ) {
+        if ( $q['nopaging'] || ! $q['per_page'] ) {
             return;
         }
 
@@ -453,7 +466,7 @@ class Data_Query implements Query_Interface {
         $suffix = $suffix ? '_' . \ltrim( $suffix, '_' ) : '';
 
         foreach ( $keys as $clause ) {
-            $filter = "posts_{$clause}{$suffix}";
+            $filter = "objects_{$clause}{$suffix}";
 
             /**
              * Filters the dynamic clause of the query.
@@ -581,7 +594,7 @@ class Data_Query implements Query_Interface {
     /**
      * Pre query filters
      */
-    protected function pre_get_objects(): array {
+    protected function pre_get_objects(): ?array {
         /**
          * Filters the posts array before the query takes place.
          *

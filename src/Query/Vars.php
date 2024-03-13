@@ -188,7 +188,7 @@ class Vars implements Query_Var_Handler {
      */
     protected function validate_vars( array $qv ): array {
         $qv['count_found'] = (bool) $qv['count_found'];
-        $qv['nopaging']    = -1 === $qv['per_page'];
+        $qv['nopaging']    = -1 === \intval( $qv['per_page'] );
 
         if ( $qv['nopaging'] ) {
             $qv['page']     = 0;

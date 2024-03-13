@@ -15,6 +15,8 @@ use Oblak\WP\Traits\Singleton;
  * Provides a consistent way to get data objects.
  *
  * By default you can use the get_object methods
+ *
+ * @method static string get_object_classname(int $id, string $type) Get the object classname.
  */
 class Data_Object_Factory {
     use Singleton;
@@ -25,13 +27,6 @@ class Data_Object_Factory {
      * @var array<string, class-string>
      */
     protected array $data_types = array();
-
-    /**
-     * Default data type.
-     *
-     * @var bool
-     */
-    protected $default = null;
 
     /**
      * Constructor
@@ -46,7 +41,7 @@ class Data_Object_Factory {
     protected function init() {
         global $xwc_data_types;
 
-        foreach ( $xwc_data_types as $type => $dto ) {
+        foreach ( $xwc_data_types->get_data_type() as $type => $dto ) {
             $this->data_types[ $type ] = $dto->classname;
         }
     }
@@ -58,11 +53,11 @@ class Data_Object_Factory {
      * @param  string $type Object type.
      * @return Data|false
      */
-    public function get_object( mixed $id, string $type = '' ): Data|false|null {
+    public function get_object( mixed $id, string $type = '' ): Data|false {
         $id = $this->{"get_{$type}_id"}( $id );
 
         if ( ! $id ) {
-            return $this->default;
+            return false;
         }
 
         $classname = $this->{"get_{$type}_classname"}( $id );
@@ -70,7 +65,7 @@ class Data_Object_Factory {
         try {
             return new $classname( $id );
         } catch ( \Exception ) {
-            return $this->default;
+            return false;
         }
     }
 
@@ -99,7 +94,7 @@ class Data_Object_Factory {
      * @param  string $type Object type.
      * @return string|false
      */
-    public function get_object_classname( int $id, string $type ): string|false {
+    protected function get_object_classname( int $id, string $type ): string|false {
         // Documented in WooCommerce.
         $classname = \apply_filters( "xwc_{$type}_class", $this->data_types[ $type ] ?? false, $id );
 

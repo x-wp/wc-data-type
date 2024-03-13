@@ -56,6 +56,38 @@ class Data_Store {
     }
 
     /**
+     * Check if the data store is valid.
+     *
+     * @param  mixed $store Data store.
+     * @return bool
+     */
+    public static function is_valid( mixed $store ): bool {
+        return static::valid_string( $store ) || static::valid_instance( $store );
+    }
+
+    /**
+     * Check if the data store string is valid.
+     *
+     * @param  mixed $store Data store.
+     * @return bool
+     */
+    protected static function valid_string( mixed $store ): bool {
+        return \is_string( $store )
+            && \class_exists( $store )
+            && \in_array( Data_Repository::class, \class_implements( $store ), true );
+    }
+
+    /**
+     * Check if the data store instance is valid.
+     *
+     * @param  mixed $store Data store.
+     * @return bool
+     */
+    protected static function valid_instance( mixed $store ): bool {
+        return \is_object( $store ) && \is_a( $store, Data_Repository::class );
+    }
+
+    /**
      * Constructor
      *
      * @param  string $object_type Object type.
@@ -89,12 +121,8 @@ class Data_Store {
         // Documented in WooCommerce.
         $store = \apply_filters( "woocommerce_{$object_type}_data_store", static::$stores[ $object_type ] );
 
-        if ( \is_object( $store ) && ! \class_implements( $store, Data_Repository::class ) ) {
+        if ( ! static::is_valid( $store ) ) {
             $this->error( $store::class );
-        }
-
-        if ( \is_string( $store ) && ! \class_exists( $store ) ) {
-            $this->error( $store );
         }
 
         return ! \is_object( $store ) ? new $store() : $store;
@@ -111,7 +139,7 @@ class Data_Store {
             \sprintf(
                 '%s %s',
                 \esc_html__( 'Invalid data store.', 'woocommerce' ),
-                \esc_html( $object_type ),
+                \esc_html( \is_object( $object_type ) ? $object_type::class : $object_type ),
             ),
         );
     }

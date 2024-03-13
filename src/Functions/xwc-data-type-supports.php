@@ -14,20 +14,9 @@
  * @param mixed  ...$args   Optional additional arguments for the feature.
  */
 function xwc_add_data_type_support( string $data_type, string $feature, mixed ...$args ) {
-    global $_xwc_data_type_features;
+    global $xwc_data_types;
 
-    $_xwc_data_type_features ??= array();
-
-    $features = (array) $feature;
-	foreach ( $features as $feature ) {
-        $args = $args ? $args : true;
-
-        if ( is_array( $args[0] ?? 'no' ) ) {
-            $args = $args[0];
-        }
-
-		$_xwc_data_type_features[ $data_type ][ $feature ] = $args;
-	}
+    $xwc_data_types->add_support( $data_type, $feature, ...$args );
 }
 
 /**
@@ -38,11 +27,9 @@ function xwc_add_data_type_support( string $data_type, string $feature, mixed ..
  * @return bool              True if the feature is supported, false if not.
  */
 function xwc_data_type_supports( string $data_type, string $feature ): bool {
-    global $_xwc_data_type_features;
+    global $xwc_data_types;
 
-    $_xwc_data_type_features ??= array();
-
-    return isset( $_xwc_data_type_features[ $data_type ][ $feature ] );
+    return $xwc_data_types->supports( $data_type, $feature );
 }
 
 
@@ -55,9 +42,7 @@ function xwc_data_type_supports( string $data_type, string $feature ): bool {
  * @return mixed
  */
 function xwc_data_type_get_supports( string $data_type, string $feature, mixed $def = false ): mixed {
-    global $_xwc_data_type_features;
+    global $xwc_data_types;
 
-    $_xwc_data_type_features ??= array();
-
-    return $_xwc_data_type_features[ $data_type ][ $feature ] ?? $def;
+    return $xwc_data_types->get_supports( $data_type, $feature, $def );
 }
