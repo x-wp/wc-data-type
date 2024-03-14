@@ -16,7 +16,6 @@ use XWC\Traits\Data_Type_Meta;
  * @property-read array       $search_columns Searchable columns.
  * @property-read string      $column_prefix  Column prefix.
  */
-#[\AllowDynamicProperties]
 class Vars implements Query_Var_Handler {
     use Data_Type_Meta;
 
@@ -61,6 +60,13 @@ class Vars implements Query_Var_Handler {
      * @var array<int, string>
      */
     protected array $supports = array();
+
+    /**
+     * Column vars.
+     *
+     * @var array
+     */
+    public array $column_vars;
 
     /**
      * Query hash.

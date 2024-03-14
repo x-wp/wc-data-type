@@ -185,6 +185,13 @@ class Data_Type_Definition {
     );
 
     /**
+     * Definition arguments.
+     *
+     * @var array
+     */
+    private array $args;
+
+    /**
      * Constructor.
      *
      * @param string $name       Data type name.
@@ -201,17 +208,17 @@ class Data_Type_Definition {
         array $config,
         array $structure,
 	) {
-        $this->setup_definition( \array_merge( $config, $structure ) );
+        $this->scaffold( \array_merge( $config, $structure ) );
     }
 
     /**
      * Set up the data type definition.
      *
-     * @param  array $def Data type definition.
+     * @param  array $args Data type definition.
      *
      * @uses Data_Type_Definition::set_table()
      */
-    private function setup_definition( array $def ): void {
+    private function scaffold( array $args ): void {
         /**
 		 * Filters the arguments for registering a data type.
 		 *
@@ -221,7 +228,7 @@ class Data_Type_Definition {
          *
          * @since 1.1.0
 		 */
-		$args  = \apply_filters( 'xwc_data_type_definition', $def, $this->name );
+		$args  = \apply_filters( 'xwc_data_type_definition', $args, $this->name );
         $props = array(
 			'table'        => 'set_table',
             'table_prefix' => 'set_table_prefix',
@@ -238,7 +245,7 @@ class Data_Type_Definition {
             'supports'     => 'set_supports',
 		);
 
-        $this->validate_definition( $def );
+        $this->validate_definition( $args );
 
         $this->id_field      = $args['id_field'] ?? 'ID';
         $this->column_prefix = $args['column_prefix'] ?? '';
@@ -375,9 +382,19 @@ class Data_Type_Definition {
      * @return array
      */
     private function set_columns( array $columns ): array {
-        foreach ( \array_keys( $columns ) as $col ) {
-            $columns[ $col ]['default'] ??= static::$default_values[ $columns[ $col ]['type'] ];
-            $columns[ $col ]['var']     ??= $this->query_prefix . $col;
+        foreach ( $columns  as $col => $data ) {
+            $data = \wp_parse_args(
+                $data,
+                array(
+					'search' => false,
+					'type'   => 'string',
+					'unique' => false,
+					'var'    => $this->query_prefix . $col,
+                ),
+            );
+
+            $data['default'] ??= static::$default_values[ $data['type'] ];
+            $columns[ $col ]   = $data;
         }
 
         return $columns;
@@ -406,10 +423,20 @@ class Data_Type_Definition {
      * @return array
      */
     private function set_meta( ?array $meta ): array {
-        foreach ( \array_keys( $meta ) as $key ) {
-            $meta[ $key ]['default'] ??= static::$default_values[ $meta[ $key ]['type'] ];
-            $meta[ $key ]['var']     ??= $key;
-            $meta[ $key ]['key']     ??= '_' . \ltrim( $key, '_' );
+        foreach ( $meta  as $key => $data ) {
+            $data = \wp_parse_args(
+                $data,
+                array(
+                    'key'      => '_' . \ltrim( $key, '_' ),
+                    'required' => false,
+                    'type'     => 'string',
+                    'unique'   => false,
+                    'var'      => $key,
+                ),
+            );
+
+            $data['default'] ??= static::$default_values[ $data['type'] ];
+            $meta[ $key ]      = $data;
         }
 
         return $meta;
@@ -426,14 +453,23 @@ class Data_Type_Definition {
         $tax_data     = array();
 
         foreach ( $taxonomies as $prop => $data ) {
-            $tax = \get_taxonomy( $data['tax'] ?? '' );
+            $data = \wp_parse_args(
+                $data,
+                array(
+                    'force'    => false,
+                    'multiple' => true,
+                    'tax'      => null,
+                    'type'     => 'tax',
+                    'var'      => $prop,
+                ),
+            );
+            $tax  = \get_taxonomy( $data['tax'] ?? '' );
 
             if ( ! $tax ) {
                 continue;
             }
 
             $data['default'] = $this->get_default_terms( $data['default'] ?? $tax->default_term, $tax->name );
-            $data['var']   ??= $prop;
 
             $tax_data[ $prop ] = $data;
         }

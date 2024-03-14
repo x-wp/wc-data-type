@@ -114,7 +114,18 @@ class Data_Query implements Query_Interface {
         $this->vars  = $this->init_vars();
         $this->cache = $this->init_cache();
 
-        ( \is_array( $query ) && isset( $query['data_type'] ) && $init ) && $this->query( $query );
+        $has_query = \is_array( $query ) && isset( $query['data_type'] );
+
+        if ( $has_query && $init ) {
+            $this->query( $query );
+            return;
+        }
+
+        if ( ! $has_query ) {
+            return;
+        }
+
+        $this->parse_query( $query );
     }
 
     /**
@@ -300,7 +311,7 @@ class Data_Query implements Query_Interface {
      * @return int
      */
     public function total_objects(): int {
-        if ( null === $this->total ) {
+        if ( null !== $this->total ) {
             return $this->total;
         }
 
@@ -309,7 +320,9 @@ class Data_Query implements Query_Interface {
 
         $this->init_query( $c, $q );
 
-        return $this->total ??= $this->query_total_objects( $c, $q->get() );
+        $q['force_count'] = true;
+
+        return $this->total ??= (int) $GLOBALS['wpdb']->get_var( $this->sql_count );
     }
 
     /**
@@ -661,29 +674,27 @@ class Data_Query implements Query_Interface {
      *
      * @global wpdb $wpdb WordPress database abstraction object.
      *
-     * @param array $c The query clauses.
-     * @param array $q The query variables.
+     * @param array $c     The query clauses.
+     * @param array $q     The query variables.
      * @return int
      */
     private function query_total_objects( array $c, array $q ) {
         global $wpdb;
 
-        /*
-         * Bail if posts is an empty array. Continue if posts is an empty string,
-         * null, or false to accommodate caching plugins that fill posts later.
-         */
-        if ( ! $q['count_found'] || 0 === \count( $this->objects ?? array() ) ) {
+        if ( ! $q['count_found'] ) {
             $this->pages = 0;
             return 0;
         }
 
+        //phpcs:disable WordPress.DB.PreparedSQL.NotPrepared, WordPress.PHP
         $found = match ( true ) {
-            //phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-            '' !== $c['limits']         => (int) $wpdb->get_var( $this->sql_count ),
-            \is_array( $this->objects ) => \count( $this->objects ),
-            null === $this->objects     => 0,
-            default                     => 1,
+            '' !== $c['limits']            => (int) $wpdb->get_var( $this->sql_count ),
+            \is_array( $this->objects )    => \count( $this->objects ),
+            null === $this->objects        => 0,
+            0 === \count( $this->objects ) => 0,
+            default                        => 1,
         };
+        // phpcs:enable
 
         $this->pages = '' !== $c['limits'] ? \ceil( $found / $q['per_page'] ) : 1;
 

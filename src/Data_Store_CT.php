@@ -341,9 +341,7 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
      * @return Data_Query|\WP_Error
      */
     protected function get_query( array $qv, bool $init = true ): Data_Query|\WP_Error {
-        if ( ( $qv['data_type'] ?? '' ) !== $this->get_data_type() ) {
-            return new \WP_Error( 'invalid_data_type', 'Invalid data type' );
-        }
+        $qv['data_type'] ??= $this->get_data_type();
 
         $qv = $this->parse_query_vars( $qv );
 
