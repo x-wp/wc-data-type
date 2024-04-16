@@ -1,4 +1,4 @@
-<?php //phpcs:disable Universal.Operators.DisallowShortTernary.Found, SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys
+<?php //phpcs:disable Universal.Operators.DisallowShortTernary.Found, SlevomatCodingStandard.Arrays.AlphabeticallySortedByKeys, Squiz.Commenting.FunctionComment.MissingParamName, Squiz.Commenting.FunctionComment.MissingParamTag
 /**
  * Data_Type_Definition class file.
  *
@@ -10,6 +10,7 @@ namespace XWC\Decorators;
 
 use XWC\Data_Object_Factory;
 use XWC\Data_Store;
+use XWC\Interfaces\DefaultValue;
 
 /**
  * Complete data type definition.
@@ -144,21 +145,7 @@ class Data_Type_Definition {
      *
      * @var array<string, mixed>
      */
-    private static array $default_values = array(
-        'array'     => array(),
-        'array_raw' => array(),
-        'binary'    => '',
-        'bool'      => false,
-        'date'      => null,
-        'float'     => 0.0,
-        'int'       => 0,
-        'json'      => array(),
-        'json_obj'  => null,
-        'parent'    => 0,
-        'post_id'   => 0,
-        'tax_id'    => 0,
-        'string'    => '',
-    );
+    private array $default_values = array();
 
     /**
      * Private props accessible via magic method.
@@ -196,7 +183,13 @@ class Data_Type_Definition {
      *
      * @param string $name       Data type name.
      * @param array  $config     Data type configuration.
-     * @param array  $structure  Data type structure.
+     * @param array{
+     *  columns: array<string, array>,
+     *  id_field: string,
+     *  meta: array<string, array>,
+     *  table: string,
+     *  table_prefix: string,
+     * }  $structure  Data type structure.
      */
     public function __construct(
         /**
@@ -208,7 +201,49 @@ class Data_Type_Definition {
         array $config,
         array $structure,
 	) {
+        $this->set_defaults();
         $this->scaffold( \array_merge( $config, $structure ) );
+    }
+
+    /**
+     * Set default values for the data type.
+     */
+    protected function set_defaults() {
+        $defaults = array(
+            'array'             => array(),
+            'array_raw'         => array(),
+            'binary'            => '',
+            'bool'              => false,
+            'bool_int'          => false,
+            'date_created'      => null,
+            'date_modified'     => null,
+            'date_updated'      => null,
+            'date_updated_gmt'  => null,
+            'date_created_gmt'  => null,
+            'date_modified_gmt' => null,
+            'date'              => null,
+            'date_gmt'          => null,
+            'float'             => 0.0,
+            'int'               => 0,
+            'json'              => array(),
+            'json_obj'          => null,
+            'parent'            => 0,
+            'post_id'           => 0,
+            'tax_id'            => 0,
+            'user_id'           => 0,
+            'string'            => '',
+        );
+
+        /**
+         * Filters the default values for data type
+         *
+         * @param  array<string, mixed> $defaults Default values.
+         * @param  string               $type     Data type name.
+         * @return array<string, mixed>
+         *
+         * @since 0.0.1
+         */
+        $this->default_values = \apply_filters( 'xwc_data_type_default_values', $defaults, $this->name );
     }
 
     /**
@@ -393,7 +428,8 @@ class Data_Type_Definition {
                 ),
             );
 
-            $data['default'] ??= static::$default_values[ $data['type'] ];
+            $data['unique']    = $this->parse_unique( $data['unique'], $col );
+            $data['default'] ??= $this->get_default_value( $data['type'] );
             $columns[ $col ]   = $data;
         }
 
@@ -407,7 +443,7 @@ class Data_Type_Definition {
      * @return string|false
      */
     private function set_meta_type( ?string $meta_type ): string|false {
-        if ( false === $meta_type ) {
+        if ( ! $meta_type ) {
             return '';
         }
 
@@ -423,7 +459,8 @@ class Data_Type_Definition {
      * @return array
      */
     private function set_meta( ?array $meta ): array {
-        foreach ( $meta  as $key => $data ) {
+        $meta ??= array();
+        foreach ( $meta as $key => $data ) {
             $data = \wp_parse_args(
                 $data,
                 array(
@@ -435,11 +472,31 @@ class Data_Type_Definition {
                 ),
             );
 
-            $data['default'] ??= static::$default_values[ $data['type'] ];
+            $data['unique']    = $this->parse_unique( $data['unique'], $key );
+            $data['default'] ??= $this->get_default_value( $data['type'] );
             $meta[ $key ]      = $data;
         }
 
         return $meta;
+    }
+
+    private function get_default_value( string $type ): mixed {
+        if ( \enum_exists( $type ) ) {
+            return $type::defaultValue();
+        }
+
+        return $this->default_values[ $type ];
+    }
+
+    private function parse_unique( bool|array|string $v, string $p ): array|false {
+        $r = match ( true ) {
+            false === $v  => false,
+            true === $v  => array( $p ),
+            \is_string( $v ) => array( $v, $p ),
+            default       => \array_merge( $v, array( $p ) ),
+        };
+
+        return \is_array( $r ) ? \array_unique( $r ) : $r;
     }
 
     /**

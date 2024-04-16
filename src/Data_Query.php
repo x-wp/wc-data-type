@@ -479,7 +479,7 @@ class Data_Query implements Query_Interface {
         $suffix = $suffix ? '_' . \ltrim( $suffix, '_' ) : '';
 
         foreach ( $keys as $clause ) {
-            $filter = "objects_{$clause}{$suffix}";
+            $filter = "xwc_objects_{$clause}{$suffix}";
 
             /**
              * Filters the dynamic clause of the query.
@@ -523,7 +523,7 @@ class Data_Query implements Query_Interface {
          * }
          * @param WP_Query $query  The WP_Query instance (passed by reference).
          */
-        $clauses = (array) \apply_filters_ref_array( 'posts_clauses' . $suffix, array( $clauses, &$this ) );
+        $clauses = (array) \apply_filters_ref_array( 'object_clauses' . $suffix, array( $clauses, &$this ) );
 
         $clauses = \wp_parse_args( $clauses, \array_combine( $keys, \array_fill( 0, \count( $keys ), '' ) ) );
     }

@@ -76,6 +76,13 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
     protected array $query_vars;
 
     /**
+     * Array of WPDB replacement types
+     *
+     * @var array|null
+     */
+    protected ?array $wpdb_types = null;
+
+    /**
      * Get the data type for the data store.
      *
      * @return string
@@ -114,19 +121,17 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
      * @param Data $data Data object.
      */
 	public function create( &$data ) {
-		global $wpdb;
-
-		if ( $data->has_created_prop() && ! $data->get_date_created( 'edit' ) ) {
-			$data->set_date_created( \time() );
+		if ( $data->has_created_prop() && ! $data->get_created_prop( 'edit' ) ) {
+			$data->set_created_prop( \time() );
 		}
 
-		$wpdb->insert( $this->table, $data->get_core_data( 'db' ) );
+        $insert_id = $this->insert_data_row( $data );
 
-		if ( ! $wpdb->insert_id ) {
+		if ( ! $insert_id ) {
 			return;
 		}
 
-		$data->set_id( $wpdb->insert_id );
+		$data->set_id( $insert_id );
 
 		$this->update_entity_meta( $data, true );
 		$this->update_terms( $data, true );
@@ -141,6 +146,21 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
 	}
 
     /**
+     * Base data row insert function
+     *
+     * Override this to provide custom insert functionality
+     *
+     * @param  Data $data Data object.
+     */
+    protected function insert_data_row( &$data ) {
+		global $wpdb;
+
+		$wpdb->insert( $this->table, $data->get_core_data( 'db' ), $this->wpdb_types );
+
+        return $wpdb->insert_id;
+    }
+
+    /**
      * {@inheritDoc}
      *
      * @param  Data $data   Package object.
@@ -150,11 +170,7 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
     public function read( &$data ) {
         $data->set_defaults();
 
-        $data_row = match ( $data->source ) {
-            'row'   => true,
-            'cache' => $this->check_cache( $data->get_id() ),
-            default => $this->load_data_row( $data->get_id() ),
-        };
+        $data_row = $this->check_data_row( $data );
 
         if ( ! $data->get_id() || ! $data_row ) {
             throw new \Exception( 'Invalid Entity' );
@@ -169,6 +185,20 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
 
         // Documented in `WC_Data_Store_WP`.
         \do_action( "woocommerce_{$this->get_data_type()}_read", $data->get_id() );
+    }
+
+    /**
+     * Check if a data row exists in the database.
+     *
+     * @param  Data $data Data object.
+     * @return array|bool
+     */
+    protected function check_data_row( Data &$data ) {
+        return match ( $data->source ) {
+            'row'   => true,
+            'cache' => $this->check_cache( $data->get_id() ),
+            default => $this->read_data_row( $data->get_id() ),
+        };
     }
 
     /**
@@ -195,7 +225,7 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
      * @param  int $id ID to load.
      * @return array|false
      */
-    protected function load_data_row( int $id ): array|false {
+    protected function read_data_row( int $id ): array|false {
         global $wpdb;
         return $wpdb->get_row(
             $wpdb->prepare(
@@ -214,21 +244,18 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
      * @param  Data $data Data Object.
      */
     public function update( &$data ) {
-        global $wpdb;
-
         $changes = $data->get_changes();
         $ch_keys = \array_intersect( \array_keys( $changes ), $data->get_core_data_keys() );
 
         $core_data = \count( $ch_keys ) > 0
-            ? \array_merge( $data->get_core_data( 'db' ), $this->get_date_modified_prop( $data ) )
+            ? \array_merge(
+                \wp_array_slice_assoc( $data->get_core_data( 'db' ), $ch_keys ),
+                $this->get_date_modified_prop( $data ),
+            )
             : array();
 
         if ( \count( $core_data ) > 0 ) {
-            $wpdb->update(
-                $this->table,
-                $core_data,
-                array( $this->id_field => $data->get_id() ),
-            );
+            $this->update_data_row( $core_data, $data->get_id() );
         }
 
         $this->update_entity_meta( $data );
@@ -241,6 +268,20 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
 
         // Documented in `WC_Data_Store_WP`.
         \do_action( 'woocommerce_update_' . $this->get_data_type(), $data->get_id(), $data );
+    }
+
+    /**
+     * Base data row update function.
+     *
+     * Override this to provide custom update functionality.
+     *
+     * @param array<string, mixed> $core_data Core data.
+     * @param int                  $id        ID.
+     */
+    protected function update_data_row( array $core_data, int $id ) {
+        global $wpdb;
+
+        $wpdb->update( $this->table, $core_data, array( $this->id_field => $id ) );
     }
 
     /**
@@ -452,6 +493,12 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
     protected function read_entity_data( &$data ) {
         $object_id = $data->get_id();
 
+        $data->set_props( $this->read_entity_terms( $object_id ) );
+
+        if ( ! $this->meta_type ) {
+            return;
+        }
+
         $meta_values = \array_map(
             static fn( $mv ) => \maybe_unserialize( $mv[0] ),
             \array_intersect_key(
@@ -464,12 +511,7 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
             \array_values( $meta_values ),
         );
 
-        $set_props = \array_merge(
-            $meta_values,
-            $this->read_entity_terms( $object_id ),
-        );
-
-        $data->set_props( $set_props );
+        $data->set_props( $meta_values );
     }
 
     /**
@@ -524,6 +566,10 @@ abstract class Data_Store_CT extends \WC_Data_Store_WP implements Interfaces\Dat
      * @param  bool $force Force update.
      */
 	protected function update_entity_meta( &$data, $force = false ) {
+        if ( ! $this->meta_type ) {
+            return;
+        }
+
 		$this->update_meta_data( $data, $force );
 
         $props = \array_filter(

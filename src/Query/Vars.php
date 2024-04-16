@@ -426,11 +426,11 @@ class Vars implements Query_Var_Handler {
         $this->position = 0;
     }
 
-    public function current() {
+    public function current(): mixed {
         return $this->vars[ $this->keys[ $this->position ] ];
     }
 
-    public function key() {
+    public function key(): mixed {
         return $this->keys[ $this->position ];
     }
 
@@ -464,7 +464,7 @@ class Vars implements Query_Var_Handler {
         $this->keys[] = $offset;
     }
 
-    public function &offsetGet( $offset ) {
+    public function &offsetGet( $offset ): mixed {
         $this->vars[ $offset ] ??= array();
 
         return $this->vars[ $offset ];

@@ -29,6 +29,7 @@ use XWC\Decorators\Data_Type_Definition;
  * @property-read array $meta_props           Meta props.
  * @property-read array $term_props           Term props.
  * @property-read array $prop_types           Prop types.
+ * @property-read array $unique_props         Unique props.
  * @property-read array $meta_key_to_props    Meta key to props.
  * @property-read array $internal_meta_keys   Internal meta keys.
  * @property-read array $must_exist_meta_keys Must exist meta keys.
@@ -134,34 +135,34 @@ final class Data_Type {
      * @return array
      */
     private function set_props(): array {
+        $q  = $this->query_vars;
+        $c  = $this->def->columns;
+        $m  = $this->def->meta;
+        $t  = $this->def->taxonomies;
+        $cm = \array_merge( $c, $m );
+
+        $pnf = static fn( $l, $a, $o, $k ) => \wp_list_pluck( \wp_list_filter( $l, $a, $o ), $k );
         return array(
             // Data specific arguments.
-            'core_data'            => \wp_list_pluck( $this->columns, 'default' ),
-            'data'                 => \wp_list_pluck( $this->meta, 'default' ),
-            'term_data'            => \wp_list_pluck( $this->taxonomies, 'default' ),
-            'prop_types'           => \array_merge(
-                \wp_list_pluck( $this->def->columns, 'type' ),
-                \wp_list_pluck( $this->def->meta, 'type' ),
-                \wp_list_pluck( $this->def->taxonomies, 'type' ),
-            ),
+            'core_data'            => \wp_list_pluck( $c, 'default' ),
+            'data'                 => \wp_list_pluck( $m, 'default' ),
+            'term_data'            => \wp_list_pluck( $t, 'default' ),
+            'prop_types'           => \wp_list_pluck( \array_merge( $cm, $t ), 'type' ),
+            'unique_props'         => $pnf( $cm, array( 'unique' => false ), 'NOT', 'unique' ),
 
             // Data store speficic arguments.
-            'meta_key_to_props'    => \array_flip( \wp_list_pluck( $this->def->meta, 'key' ) ),
-            'internal_meta_keys'   => \array_values( \wp_list_pluck( $this->def->meta, 'key' ) ),
-            'must_exist_meta_keys' => \array_values(
-                \wp_list_pluck( \wp_list_filter( $this->meta, array( 'required' => true ) ), 'key' ),
-            ),
-            'term_props'           => \wp_list_pluck( $this->def->taxonomies, 'tax' ),
+            'meta_key_to_props'    => \array_flip( \wp_list_pluck( $m, 'key' ) ),
+            'internal_meta_keys'   => \array_values( \wp_list_pluck( $m, 'key' ) ),
+            'must_exist_meta_keys' => \array_values( $pnf( $m, array( 'required' => true ), 'AND', 'key' ) ),
+            'term_props'           => \wp_list_pluck( $t, 'tax' ),
 
             // Query specific arguments.
-            'column_vars'          => \array_flip(
-                \wp_list_pluck( \wp_list_filter( $this->query_vars, array( 'type' => 'column' ) ), 'var' ),
-            ),
+            'column_vars'          => \array_flip( $pnf( $q, array( 'type' => 'column' ), 'AND', 'var' ) ),
             'search_columns'       => \array_keys(
-                \wp_list_filter( $this->columns, array( 'search' => true ) ),
+                \wp_list_filter( $c, array( 'search' => true ) ),
             ),
             'date_columns'         => \array_filter(
-                $this->columns,
+                $c,
                 static fn( $c ) => \str_starts_with( $c['type'], 'date' )
             ),
         );
