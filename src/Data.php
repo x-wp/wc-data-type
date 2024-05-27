@@ -251,6 +251,21 @@ abstract class Data extends \WC_Data implements Entity {
 	}
 
     /**
+     * Get array of changed props - formatted for saving to the database.
+     */
+    public function get_changes_for_db() {
+        $data = array();
+
+        foreach ( $this->changes as $prop => $value ) {
+            $type = $this->prop_types[ $prop ] ?? '';
+
+            $data[ $prop ] = $this->format_prop_for_db( $prop, $type, $value );
+        }
+
+        return $data;
+    }
+
+    /**
      * Get the core data for this object.
      *
      * @param  string $context The context for the data.

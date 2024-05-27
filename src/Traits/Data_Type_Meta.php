@@ -49,7 +49,7 @@ trait Data_Type_Meta {
                 continue;
             }
 
-            $this->$prop = &static::$metadata[ $dt ][ $prop ];
+            $this->$prop = static::$metadata[ $dt ][ $prop ];
         }
     }
 }
