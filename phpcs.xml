@@ -1,19 +1,42 @@
 <?xml version="1.0"?>
-<ruleset name="WordPress Theme">
-  <config name="minimum_supported_wp_version" value="6.0"/>
-  <config name="testVersion" value="7.4-"/>
+<ruleset name="WC Subscription downloads">
+	<config name="minimum_wp_version" value="6.5"/>
+  <config name="testVersion" value="8.0-"/>
 
   <rule ref="Oblak"/>
   <rule ref="Oblak-WooCommerce"/>
   <rule ref="Oblak-Advanced"/>
 
+  <rule ref="Squiz.Commenting">
+    <severity>0</severity>
+  </rule>
+
+  <rule ref="WooCommerce.Commenting">
+    <severity>0</severity>
+  </rule>
+
   <rule ref="WordPress.WP.I18n">
 		<properties>
 			<property name="text_domain" type="array" extend="true">
-				<element value="serbian-addons-for-woocommerce"/>
+				<element value="default"/>
 				<element value="woocommerce"/>
 			</property>
 		</properties>
+	</rule>
+
+  <rule ref="WordPress">
+      <exclude name="Generic.WhiteSpace.DisallowSpaceIndent" />
+  </rule>
+  <rule ref="Generic.WhiteSpace.ScopeIndent">
+      <properties>
+          <property name="indent" value="4"/>
+          <property name="tabIndent" value="false"/>
+      </properties>
+  </rule>
+  <rule ref="Generic.WhiteSpace.DisallowTabIndent" />
+
+  <rule ref="WordPress">
+    <exclude name="WordPress.Arrays.ArrayDeclarationSpacing"/>
 	</rule>
 
   <rule ref="SlevomatCodingStandard.Operators.SpreadOperatorSpacing">

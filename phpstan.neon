@@ -1,0 +1,8 @@
+parameters:
+  level: 5
+  paths:
+    - src
+  bootstrapFiles:
+    - vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
+  scanDirectories:
+    - vendor/woocommerce/subscriptions-core/includes/
