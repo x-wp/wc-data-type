@@ -25,11 +25,19 @@ trait Prop_Setters {
 	 * @param mixed  $value Value of the prop.
 	 */
 	protected function set_prop( $prop, $value ) {
-		$type = $this->get_prop_type( $prop );
+        if ( 'id' === \strtolower( $prop ) ) {
+            return;
+        }
 
 		if ( \in_array( $prop, $this->unique_data, true ) && $this->get_object_read() ) {
 			$this->check_unique_prop( $prop, $value );
 		}
+
+		$type = $this->get_prop_type( $prop );
+
+        if ( \str_contains( $type, '|' ) ) {
+            [ $type, $subtype ] = \explode( '|', $type );
+        }
 
 		match ( $type ) {
 			'date_created' => $this->set_date_prop( $prop, $value ),
@@ -37,8 +45,9 @@ trait Prop_Setters {
             'date'         => $this->set_date_prop( $prop, $value ),
 			'bool'         => $this->set_bool_prop( $prop, $value ),
 			'bool_int'     => $this->set_bool_prop( $prop, $value ),
-			'array'        => $this->set_array_prop( $prop, $value ),
-			'array_raw'    => $this->set_array_prop( $prop, $value ),
+            'enum'         => $this->set_enum_prop( $prop, $value, $subtype ),
+			'array_assoc'  => $this->set_assoc_arr_prop( $prop, $value ),
+			'array'        => $this->set_normal_arr_prop( $prop, $value ),
 			'binary'       => $this->set_binary_prop( $prop, $value ),
 			'json_obj'     => $this->set_json_prop( $prop, $value, false ),
 			'json'         => $this->set_json_prop( $prop, $value ),
@@ -109,14 +118,50 @@ trait Prop_Setters {
 	}
 
     /**
+     * Sets an enum prop
+     *
+     * @template T of \BackedEnum
+     *
+     * @param  string            $prop Property name.
+     * @param  mixed             $val  Property value.
+     * @param  T|class-string<T> $enum Enum class.
+     */
+    protected function set_enum_prop( string $prop, mixed $val, $type ) {
+        if ( $val instanceof $type ) {
+            $this->set_wc_data_prop( $prop, $val );
+            return;
+        }
+
+        try {
+            $val = $type::from( $val );
+
+            $this->set_wc_data_prop( $prop, $val );
+        } catch ( \ValueError ) {
+            $this->error(
+                'invalid_enum_value',
+                \sprintf(
+                    'The value %s for %s is not a valid enum value.',
+                    \esc_html( $val ),
+                    \esc_html( $prop ),
+                ),
+            );
+        }
+    }
+
+    /**
      * Set an array prop
      *
      * @param  string $prop  Property name.
      * @param  mixed  $value Property value.
      */
-	protected function set_array_prop( string $prop, $value ) {
+	protected function set_normal_arr_prop( string $prop, $value ) {
 		$this->set_wc_data_prop( $prop, \wc_string_to_array( $value ) );
 	}
+
+    protected function set_assoc_arr_prop( string $prop, $value ) {
+        $value = \maybe_unserialize( $value );
+        $this->set_wc_data_prop( $prop, $value );
+    }
 
     /**
      * Set a binary prop

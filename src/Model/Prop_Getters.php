@@ -118,8 +118,12 @@ trait Prop_Getters {
             return $this->get_wc_data_prop( $prop, $context );
         }
 
-		$type  = $this->get_prop_type( $prop );
         $value = $this->get_wc_data_prop( $prop, 'edit' );
+		$type  = $this->get_prop_type( $prop );
+
+        if ( \str_contains( $type, '|' ) ) {
+            [ $type ] = \explode( '|', $type );
+        }
 
         return match ( $type ) {
             'string'       => $value,
@@ -128,8 +132,9 @@ trait Prop_Getters {
             'date_updated' => $this->get_date_prop( $value ),
             'bool'         => $this->get_bool_prop( $value, 'string' ),
             'bool_int'     => $this->get_bool_prop( $value, 'int' ),
-            'array'        => $this->get_array_prop( $value, 'serialize' ),
-            'array_raw'    => $this->get_array_prop( $value, 'string' ),
+            'array_assoc'  => $this->get_array_prop( $value, 'assoc' ),
+            'array'        => $this->get_array_prop( $value, 'normal' ),
+            'enum'         => $this->get_enum_prop( $value ),
             'json'         => $this->get_json_prop( $value ),
             'json_obj'     => $this->get_json_prop( $value, \JSON_FORCE_OBJECT ),
             'binary'       => $this->get_binary_prop( $value ),
@@ -157,13 +162,23 @@ trait Prop_Getters {
         };
     }
 
-    protected function get_array_prop( $value, $format = 'serialize' ) {
+    protected function get_array_prop( $value, $format = 'assoc' ) {
         return match ( $format ) {
             // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
-            'serialize' => \serialize( $value ),
-            'string'    => \wc_string_to_array( $value ),
-            default     => $value,
+            'assoc'  => \serialize( $value ),
+            'normal' => \implode( ',', $value ),
+            default  => $value,
         };
+    }
+
+    /**
+     * Get enum prop value.
+     *
+     * @param  \BackedEnum $enum_val Enum value.
+     * @return string|int
+     */
+    protected function get_enum_prop( $enum_val ): string|int {
+        return $enum_val->value;
     }
 
     protected function get_json_prop( $value, int $flags = 0 ): string {

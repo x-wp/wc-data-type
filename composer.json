@@ -11,7 +11,8 @@
   "require": {
     "php": ">=8.0",
     "x-wp/helper-classes": "^1",
-    "x-wp/helper-functions": "^1"
+    "x-wp/helper-functions": "^1",
+    "symfony/polyfill-php81": "^1.30"
   },
   "repositories": [
     {
@@ -45,8 +46,6 @@
       "src/Utils/xwc-data-utils-object.php"
     ]
   },
-  "minimum-stability": "dev",
-  "prefer-stable": true,
   "config": {
     "platform-check": false,
     "allow-plugins": {

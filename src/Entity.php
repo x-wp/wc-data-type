@@ -112,7 +112,7 @@ class Entity {
         Model ...$defs,
     ) {
         $vars = \array_keys( \get_class_vars( $this::class ) );
-        $vars = \array_diff( $vars, array( 'args', 'factories', 'stores', 'hooked' ) );
+        $vars = \array_diff( $vars, array( 'args', 'factories', 'stores', 'hooked', 'defaults' ) );
 
         foreach ( $vars as $var ) {
             $this->$var = $this->set_prop( $var, $defs );

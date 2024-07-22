@@ -110,7 +110,7 @@ trait Query_Handler {
     protected function remap_objects( array $objects ): array {
         $cname = \xwc_get_object_classname( 0, $this->get_object_type() );
         return \array_map(
-            static fn( $obj ) => new $cname( $obj ),
+            fn( $obj ) => new $cname( $this->remap_columns( (array) $obj, true ) ),
             $objects,
         );
     }

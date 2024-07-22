@@ -190,7 +190,7 @@ abstract class XWC_Data extends WC_Data {
         if ( $this->get_id() ) {
             $this->maybe_set_date( 'updated', 'changes' );
         } else {
-            $this->maybe_set_date( 'created', 'data' );
+            $this->maybe_set_date( 'created' );
         }
 
         return parent::save();

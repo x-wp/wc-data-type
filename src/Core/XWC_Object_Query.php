@@ -317,6 +317,7 @@ class XWC_Object_Query {
                 {$clauses['orderby']}
                 {$clauses['limits']}
             ) AS tmp USING ({$this->id_field})
+            {$clauses['orderby']}
             SQL;
 
         $this->sql = $req;
