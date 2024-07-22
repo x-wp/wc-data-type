@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<ruleset name="WC Subscription downloads">
+<ruleset name="WC Data Type">
 	<config name="minimum_wp_version" value="6.5"/>
   <config name="testVersion" value="8.0-"/>
 

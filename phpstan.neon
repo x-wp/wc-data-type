@@ -4,5 +4,3 @@ parameters:
     - src
   bootstrapFiles:
     - vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
-  scanDirectories:
-    - vendor/woocommerce/subscriptions-core/includes/
