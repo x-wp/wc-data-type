@@ -23,6 +23,7 @@ use XWC_Object_Factory;
  * @property-read string $id_field   ID field name. Default 'id'.
  * @property-read array  $core_props Core properties.
  * @property-read array  $meta_props Meta properties. Optional.
+ * @property-read bool   $has_meta   Has meta data.
  *
  * Stores and classnames.
  *
@@ -57,6 +58,7 @@ class Entity {
         'unique_data',
         'cols_to_props',
         'meta_to_props',
+        'has_meta',
 	);
 
     /**
@@ -103,6 +105,7 @@ class Entity {
         'data' => null,
         'fct'  => null,
         'imk'  => null,
+        'msc'  => null,
         'mtp'  => null,
         'pt'   => null,
         'unq'  => null,
@@ -192,7 +195,11 @@ class Entity {
 
         $cname = $this->meta_store;
 
-        return new $cname();
+        return $this->args['msc'] ??= new $cname();
+    }
+
+    protected function get_has_meta(): bool {
+        return null !== $this->get_meta_store();
     }
 
     /**

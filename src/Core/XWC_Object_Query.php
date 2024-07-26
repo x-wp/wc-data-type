@@ -88,6 +88,7 @@ class XWC_Object_Query {
     protected function parse( array $q ) {
         $d = array(
             'count_found' => true,
+            'count_only'  => false,
             'fields'      => 'ids',
             'nopaging'    => false,
             'order'       => 'DESC',
@@ -104,6 +105,13 @@ class XWC_Object_Query {
         if ( (int) $q['per_page'] <= 0 ) {
             $q['per_page'] = false;
             $q['nopaging'] = true;
+        }
+
+        if ( $q['count_only'] ) {
+            $q['fields']      = 'ids';
+            $q['count_found'] = true;
+            $q['nopaging']    = true;
+            $q['per_page']    = false;
         }
 
         $this->vars = $q;
@@ -350,6 +358,10 @@ class XWC_Object_Query {
     protected function query_database( array &$c, array $q ): array {
         global $wpdb;
 
+        if ( $q['count_only'] ) {
+            return array();
+        }
+
         // phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
         return 'ids' === $q['fields']
             ? \array_map( 'intval', $wpdb->get_col( $this->sql ) )
@@ -379,6 +391,7 @@ class XWC_Object_Query {
 
         //phpcs:disable WordPress.DB.PreparedSQL.NotPrepared, WordPress.PHP
         $found = match ( true ) {
+            $q['count_only'],
             '' !== $c['limits']            => (int) $wpdb->get_var( $this->sql_count ),
             \is_array( $this->objects )    => \count( $this->objects ),
             default                        => 0,

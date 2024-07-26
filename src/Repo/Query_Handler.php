@@ -82,8 +82,9 @@ trait Query_Handler {
      * @return array<T|int>|array{objects: array<T|int>, pages: int, total: int}
      */
     public function query( array $vars ): array {
-        $retn  = $vars['return'] ?? 'ids';
-        $vars  = $this->get_data_query_args( $vars );
+        $retn = $vars['return'] ?? 'ids';
+        $vars = $this->get_data_query_args( $vars );
+
         $query = 0 === \count( $vars['errors'] ?? array() )
             ? new \XWC_Object_Query( ...$vars )
             : (object) array( 'objects' => array(), 'total' => 0, 'pages' => 0 );
@@ -99,6 +100,19 @@ trait Query_Handler {
             'pages'   => $query->pages,
             'total'   => $query->total,
         );
+    }
+
+    /**
+     * Count objects.
+     *
+     * @param  array $vars
+     * @return int
+     */
+    public function count( array $vars ): int {
+        $vars  = $this->get_data_query_args( $vars );
+        $query = new \XWC_Object_Query( ...$vars );
+
+        return $query->total;
     }
 
     /**

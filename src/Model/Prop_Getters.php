@@ -28,7 +28,7 @@ trait Prop_Getters {
 
     protected function is_binary_string( string $value ): bool {
         //phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-		return ! @\mb_check_encoding( $value, 'UTF-8' );
+		return ! (bool) @\mb_check_encoding( $value, 'UTF-8' );
     }
 
     public function get_prop_group( string $prop ): string {
@@ -100,6 +100,16 @@ trait Prop_Getters {
         }
 
         return $changed;
+    }
+
+    public function get_data() {
+        $data = parent::get_data();
+
+        if ( ! $this->has_meta ) {
+            unset( $data['meta_data'] );
+        }
+
+        return $data;
     }
 
     /**
@@ -191,7 +201,7 @@ trait Prop_Getters {
 
     protected function get_unknown_prop( string $type, string $prop, mixed $value ): mixed {
         if ( \method_exists( $this, "get_{$type}_prop" ) ) {
-            $value = $this->{"get_{$type}_prop"}( $value );
+            $value = $this->{"get_{$type}_prop"}( $prop );
         }
 
         /**

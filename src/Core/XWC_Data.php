@@ -27,7 +27,7 @@
  *
  * @method XWC_Data_Store_XT<static> get_data_store() Get the data store object.
  */
-abstract class XWC_Data extends WC_Data {
+abstract class XWC_Data extends WC_Data implements WC_Data_Definition {
     use \XWC\Data\Model\Prop_Getters;
     use \XWC\Data\Model\Prop_Setters;
 
@@ -37,6 +37,8 @@ abstract class XWC_Data extends WC_Data {
      * @var XWC_Data_Store_XT
      */
     protected $data_store;
+
+    protected bool $has_meta;
 
     protected bool $core_read = false;
 
@@ -64,14 +66,15 @@ abstract class XWC_Data extends WC_Data {
 	}
 
     /**
-     * Get the Data Object ID if ID is passed, otherwise Data is new and empty.
-     *
-     * @param int|array|stdClass|XWC_Data $data Package to init.
-     */
+	 * Default constructor.
+	 *
+     * @param int|array|stdClass|XWC_Data $data ID to load from the DB (optional) or already queried data.
+	 */
     public function __construct( int|array|stdClass|XWC_Data $data = 0 ) {
         $this->load_data_store();
         $this->load_object_args();
         $this->load_data( $data );
+        $this->do_actions( $data );
     }
 
     /**
@@ -104,6 +107,10 @@ abstract class XWC_Data extends WC_Data {
             \is_array( $data )           => $this->load_row( $data ),
             \is_object( $data )          => $this->load_row( (array) $data ),
         };
+    }
+
+    protected function do_actions() {
+        // Do nothing.
     }
 
     protected function load_id( int $id ) {

@@ -102,6 +102,7 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
         $this->object_args = array(
             'core_data'   => $e->core_data,
             'data'        => $e->data,
+            'has_meta'    => $e->has_meta,
             'prop_types'  => $e->prop_types,
             'unique_data' => $e->unique_data,
         );
@@ -260,7 +261,7 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
 
         $wpdb->delete( $this->get_table(), array( $this->get_id_field() => $data->get_id() ) );
 
-        $this->delete_all_meta( $obj_id );
+        $this->delete_all_meta( $data );
         $this->delete_terms( $obj_id );
 
         $data->set_id( 0 );

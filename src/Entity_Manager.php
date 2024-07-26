@@ -92,7 +92,8 @@ final class Entity_Manager {
 
             $entity->add_hooks();
 
-            return new \WP_Error( 'aaa', 'a', 'a' );
+            return $entity;
+
         } catch ( \WC_Data_Exception $e ) {
             return new \WP_Error( $e->getCode(), $e->getMessage(), $e->getErrorData() );
         }
