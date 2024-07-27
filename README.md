@@ -1,1 +1,1 @@
-# WooCommerce Utilities
+# WC Data eXtender

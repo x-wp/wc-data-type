@@ -1,5 +1,6 @@
 {
   "name": "x-wp/wc-data-type",
+  "description": "A library for working and standardizing working with WooCommerce data types.",
   "license": "GPL-3.0-or-later",
   "type": "library",
   "non-feature-branches": [
@@ -8,6 +9,7 @@
     "feat-*",
     "renovate/*"
   ],
+  "homepage": "https://extended.woo.rs",
   "authors": [
     {
       "name": "Sibin Grasic",
