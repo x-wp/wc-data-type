@@ -2,6 +2,13 @@
 
 namespace XWC\Data\Model;
 
+use XWC_Data;
+
+/**
+ * Prop getters trait.
+ *
+ * @template T of XWC_Data
+ */
 trait Prop_Getters {
     /**
      * Array of core data keys.

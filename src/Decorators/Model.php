@@ -4,12 +4,16 @@ namespace XWC\Data\Decorators;
 
 use XWC_Data;
 use XWC_Data_Store_XT;
+use XWC_Meta_Store;
 use XWC_Object_Factory;
 
 /**
  * Data model definition.
  *
- * @template Data of XWC_Data
+ * @template TData of XWC_Data
+ * @template TDstr of XWC_Data_Store_XT
+ * @template TFact of XWC_Object_Factory
+ * @template TMeta of XWC_Meta_Store
  */
 #[\Attribute( \Attribute::TARGET_CLASS )]
 class Model {
@@ -23,7 +27,7 @@ class Model {
     /**
      * Model class name.
      *
-     * @var class-string<Data>
+     * @var class-string<TData>
      */
     public string $model;
 
@@ -38,7 +42,7 @@ class Model {
     /**
      * Set the model class name.
      *
-     * @param  class-string<Data> $model Model class name.
+     * @param  class-string<TData> $model Model class name.
      * @return static
      */
     public function set_model( string $model ): static {
@@ -47,15 +51,27 @@ class Model {
         return $this;
     }
 
+    /**
+     * Undocumented function
+     *
+     * @param  string      $name
+     * @param  string      $table
+     * @param  array       $core_props
+     * @param  array       $meta_props
+     * @param  string      $id_field
+     * @param  class-string<TDstr>|null $data_store
+     * @param  class-string<TFact>|null $factory
+     * @param  class-string<TMeta>|null $meta_store
+     */
     public function __construct(
         string $name,
         string $table,
         array $core_props,
+        array $meta_props = array(),
+        string $id_field = 'id',
         ?string $data_store = null,
         ?string $factory = null,
-        string $id_field = 'id',
         ?string $meta_store = null,
-        array $meta_props = array(),
     ) {
         $this->name = $name;
         $this->scaffold(
@@ -114,6 +130,12 @@ class Model {
         return \str_replace( '{{PREFIX}}', $wpdb->prefix, $table );
     }
 
+    /**
+     * Set the data store class name.
+     *
+     * @param  class-string<TDstr>|null $store Data store class name.
+     * @return class-string<TDstr>
+     */
     protected function set_data_store( ?string $store ): string {
         if ( \is_null( $store ) ) {
             return XWC_Data_Store_XT::class;
@@ -126,6 +148,12 @@ class Model {
         return $store;
 	}
 
+    /**
+     * Set the object factory class name.
+     *
+     * @param  class-string<TFact>|null $factory Object factory class name.
+     * @return class-string<TFact>
+     */
     protected function set_factory( ?string $factory ): string {
         if ( \is_null( $factory ) ) {
             return XWC_Object_Factory::class;
@@ -157,6 +185,12 @@ class Model {
         return $props;
     }
 
+    /**
+     * Set the meta store class name.
+     *
+     * @param  class-string<TMeta>|null $store Meta store class name.
+     * @return class-string<TMeta>|null
+     */
     protected function set_meta_store( ?string $store ): ?string {
         if ( \is_null( $store ) ) {
             return null;

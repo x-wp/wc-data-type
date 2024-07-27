@@ -11,12 +11,12 @@ use XWC_Object_Factory;
 /**
  * Entity object.
  *
- * @template TData of XWC_Data
- * @template TRepo of XWC_Data_Store_XT
- * @template Meta of XWC_Meta_Store
- * @template Factory of XWC_Object_Factory
- *
  * Base definition.
+ *
+ * @template TData of XWC_Data
+ * @template TDstr of XWC_Data_Store_XT
+ * @template TFact of XWC_Object_Factory
+ * @template TMeta of XWC_Meta_Store
  *
  * @property-read string $name       Data object name.
  * @property-read string $table      Database table name.
@@ -27,10 +27,9 @@ use XWC_Object_Factory;
  *
  * Stores and classnames.
  *
- * @property-read class-string<TData> $model      Model class name.
- * @property-read Factory<TData>      $factory    Object factory.
- * @property-read TRepo<TData>        $data_store Data store class name.
- * @property-read Meta<TData>|null    $meta_store Meta store class name. Optional.
+ * @property-read class-string<TData>              $model      Model class name.
+ * @property-read TFact<TData>        $factory    Object factory.
+ * @property-read TMeta<TData>|null   $meta_store Meta store class name. Optional.
  *
  * Custom data.
  *
@@ -64,14 +63,14 @@ class Entity {
     /**
      * Object factories.
      *
-     * @var array<string, Factory<TData>>
+     * @var array<string, TFact<TData>>
      */
     protected static array $factories = array();
 
     /**
      * Data stores.
      *
-     * @var array<string, TRepo<TData>>
+     * @var array<string, TDstr<TData,TMeta<TData>>>
      */
     protected static array $stores = array();
 
@@ -92,7 +91,14 @@ class Entity {
     protected string $model;
 
     protected string $table;
+
+    /**
+     * Data store class name.
+     *
+     * @var class-string<TDstr<TData,TMeta<TData>>>
+     */
     protected string $data_store;
+
     protected string $factory;
     protected array $core_props;
     protected string $id_field;
@@ -111,6 +117,11 @@ class Entity {
         'unq'  => null,
     );
 
+    /**
+     * Constructor.
+     *
+     * @param  Model<TData,TDstr,TFact,TMeta> ...$defs Model definitions.
+     */
     public function __construct(
         Model ...$defs,
     ) {
@@ -188,8 +199,13 @@ class Entity {
         return static::$factories[ $this->name ] ??= $this->factory::instance();
     }
 
+    /**
+     * Get the meta store.
+     *
+     * @return TMeta<TData>|null
+     */
     protected function get_meta_store(): ?XWC_Meta_Store {
-        if ( ! $this->meta_store ) {
+        if ( \is_null( $this->meta_store ) ) {
             return null;
         }
 
@@ -205,11 +221,9 @@ class Entity {
     /**
      * Get the data store.
      *
-     * @return TRepo<TData>
-     *
-     * @phan-return TRepo<TData>
+     * @return TDstr<TData,TMeta<TData>>
      */
-    protected function get_data_store(): XWC_Data_Store_XT {
+    protected function get_data_store() {
         $cname = $this->data_store;
 
         return static::$stores[ $this->name ] ??= new $cname( $this );

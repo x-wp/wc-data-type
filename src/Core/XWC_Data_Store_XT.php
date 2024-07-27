@@ -13,6 +13,7 @@ use XWC\Data\Repo;
  * Extended data store for searching and getting data from the database.
  *
  * @template T of XWC_Data
+ * @template M of XWC_Meta_Store
  */
 class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store_Interface {
     use Repo\Meta_Handler;
@@ -44,6 +45,11 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
 	 */
 	protected $internal_meta_keys = array();
 
+    /**
+     * Meta store.
+     *
+     * @var M|null
+     */
     protected ?XWC_Meta_Store $meta_store;
 
     public function get_object_type(): string {
@@ -85,6 +91,11 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
         return $this->meta_to_props;
     }
 
+    /**
+     * Get the meta store.
+     *
+     * @return M|null
+     */
     public function get_meta_store(): ?XWC_Meta_Store {
         return $this->meta_store;
     }

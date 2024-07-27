@@ -8,11 +8,8 @@
 /**
  * Get an entity data store
  *
- * @template DS of XWC_Data_Store_XT
- *
  * @param  string        $name Entity name.
- * @return WC_Data_Store<DS>
- * @phan-return WC_Data_Store<DS>
+ * @return XWC_Data_Store_XT
  */
 function xwc_data_store( string $name ) {
     static $wcds = array();

@@ -2,6 +2,11 @@
 
 namespace XWC\Data\Model;
 
+use XWC_Data;
+
+/**
+ * Prop setters trait.
+ */
 trait Prop_Setters {
     /**
 	 * All data for this object. Name value pairs (name + default value).
@@ -13,6 +18,46 @@ trait Prop_Setters {
     abstract protected function get_prop_type( string $prop ): string;
 
     abstract protected function is_binary_string( string $value ): bool;
+
+    /**
+	 * Set a collection of props in one go, collect any errors, and return the result.
+	 * Only sets using public methods.
+	 *
+	 * @since  3.0.0
+	 *
+	 * @param array  $props Key value pairs to set. Key is the prop and should map to a setter function name.
+	 * @param string $context In what context to run this.
+	 *
+	 * @return bool|static|\WP_Error
+	 */
+    public function set_props( $props, $context = 'set' ) {
+        $prop_res = parent::set_props( $props, $context );
+
+        if ( 'save' !== $context ) {
+            return $prop_res;
+        }
+
+        if ( \is_wp_error( $prop_res ) ) {
+            return $prop_res;
+        }
+
+        $save_res = null;
+
+        try {
+            $save_res = $this->save();
+        } catch ( \Throwable $e ) {
+            $save_res = new \WP_Error( 'save_error', $e->getMessage() );
+        } finally {
+            return match ( true ) {
+                0 === $save_res          => new \WP_Error(
+                    'save_error',
+                    'An unknown error occurred while saving.',
+                ),
+                \is_wp_error( $save_res ) => $save_res,
+                default                  => $this,
+            };
+        }
+    }
 
     /**
 	 * Sets a prop for a setter method.
@@ -45,7 +90,7 @@ trait Prop_Setters {
             'date'         => $this->set_date_prop( $prop, $value ),
 			'bool'         => $this->set_bool_prop( $prop, $value ),
 			'bool_int'     => $this->set_bool_prop( $prop, $value ),
-            'enum'         => $this->set_enum_prop( $prop, $value, $subtype ),
+            'enum'         => $this->set_enum_prop( $prop, $value, $subtype ?? null ),
 			'array_assoc'  => $this->set_assoc_arr_prop( $prop, $value ),
 			'array'        => $this->set_normal_arr_prop( $prop, $value ),
 			'binary'       => $this->set_binary_prop( $prop, $value ),
@@ -124,9 +169,9 @@ trait Prop_Setters {
      *
      * @param  string            $prop Property name.
      * @param  mixed             $val  Property value.
-     * @param  T|class-string<T> $enum Enum class.
+     * @param  T|class-string<T> $type Enum class.
      */
-    protected function set_enum_prop( string $prop, mixed $val, $type ) {
+    protected function set_enum_prop( string $prop, mixed $val, $type = null ) {
         if ( $val instanceof $type ) {
             $this->set_wc_data_prop( $prop, $val );
             return;

@@ -6,11 +6,11 @@ use XWC\Data\Entity_Manager;
 /**
  * Register an entity data model
  *
- * @template T of XWC_Data
+ * @template TData of XWC_Data
  *
- * @param class-string<T> $classname Data type class name.
+ * @param class-string<TData> $classname Data type class name.
  *
- * @return Entity<T,XWC_Data_Store_XT,XWC_Meta_Store,XWC_Object_Factory>|WP_Error
+ * @return Entity|WP_Error
  */
 function xwc_register_entity( string $classname ): Entity|\WP_Error {
     return Entity_Manager::register( $classname );

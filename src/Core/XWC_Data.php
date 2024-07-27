@@ -5,6 +5,9 @@
  * @package WooCommerce Utils
  */
 
+use XWC\Data\Model\Prop_Getters;
+use XWC\Data\Model\Prop_Setters;
+
 /**
  * * Extended Data Class.
  *
@@ -28,8 +31,14 @@
  * @method XWC_Data_Store_XT<static> get_data_store() Get the data store object.
  */
 abstract class XWC_Data extends WC_Data implements WC_Data_Definition {
-    use \XWC\Data\Model\Prop_Getters;
-    use \XWC\Data\Model\Prop_Setters;
+    /**
+     * Prop getters trait.
+     *
+     * @use Prop_Getters<static>
+     */
+    use Prop_Getters;
+
+    use Prop_Setters;
 
     /**
      * Data store object.
@@ -68,7 +77,7 @@ abstract class XWC_Data extends WC_Data implements WC_Data_Definition {
     /**
 	 * Default constructor.
 	 *
-     * @param int|array|stdClass|XWC_Data $data ID to load from the DB (optional) or already queried data.
+     * @param int|array|stdClass|static $data ID to load from the DB (optional) or already queried data.
 	 */
     public function __construct( int|array|stdClass|XWC_Data $data = 0 ) {
         $this->load_data_store();
@@ -95,7 +104,7 @@ abstract class XWC_Data extends WC_Data implements WC_Data_Definition {
     /**
      * Load the data for this object from the database.
      *
-     * @param  int|array|stdClass|XWC_Data $data Package to init.
+     * @param  int|array|stdClass|static $data Package to init.
      */
     protected function load_data( int|array|stdClass|XWC_Data $data ) {
         $this->data         = \array_merge( $this->core_data, $this->data, $this->extra_data );
@@ -109,7 +118,7 @@ abstract class XWC_Data extends WC_Data implements WC_Data_Definition {
         };
     }
 
-    protected function do_actions() {
+    protected function do_actions( $data = null ) {
         // Do nothing.
     }
 

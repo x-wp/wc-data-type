@@ -13,15 +13,13 @@ use XWP\Helper\Traits\Singleton;
 /**
  * Entity manager.
  *
- * @template T of XWC_Data
- * @template R of XWC_Data_Store_XT
- * @template M of XWC_Meta_Store
- * @template F of XWC_Object_Factory
+ * @template TData of XWC_Data
+ * @template TDstr of XWC_Data_Store_XT
+ * @template TFact of XWC_Object_Factory
+ * @template TMeta of XWC_Meta_Store
  *
- * @phpstan-type TheEntity Entity<T,R,M,F>
- *
- * @method static Entity<T>|WP_Error                      register(string $classname)      Register a data type.
- * @method static array<string, TheEntity>|TheEntity|null get_entity(?string $name = null) Get all registered entities or a specific entity.
+ * @method static Entity<TData, TDstr, TFact, TMeta>|WP_Error                                               register(string $classname)      Register a data type.
+ * @method static array<string, Entity<TData, TDstr, TFact, TMeta>>|Entity<TData, TDstr, TFact, TMeta>|null get_entity(?string $name = null) Get all registered entities or a specific entity.
  */
 final class Entity_Manager {
     use Singleton;
@@ -29,9 +27,9 @@ final class Entity_Manager {
     /**
      * Registered entities.
      *
-     * @var array<string, Entity<T,R,M,F>>
+     * @var array<string, Entity<TData, TDstr, TFact, TMeta>>
      *
-     * @phan-var array<string, TheEntity>
+     * @phan-var array<string, Entity<TData, TDstr, TFact, TMeta>>
      */
     private array $entities = array();
 
@@ -62,9 +60,7 @@ final class Entity_Manager {
      * Get all registered entities or a specific entity.
      *
      * @param  string|null $name Entity name.
-     * @return array<string, Entity<T>>|Entity<T>|null
-     *
-     * @phan-return array<string, TheEntity>|TheEntity|null
+     * @return array<string, Entity<TData, TDstr, TFact, TMeta>>|Entity<TData, TDstr, TFact, TMeta>|null
      */
     protected function get_entity( ?string $name = null ): array|Entity|null {
         return $name ? ( $this->entities[ $name ] ?? null ) : $this->entities;
@@ -73,10 +69,8 @@ final class Entity_Manager {
     /**
      * Register a data type model.
      *
-     * @param  class-string<T> $classname Data type class name.
-     * @return Entity<T>|\WP_Error
-     *
-     * @phpstan-return TheEntity|\WP_Error
+     * @param  class-string<TData> $classname Data type class name.
+     * @return Entity<TData, TDstr, TFact, TMeta>|\WP_Error
      */
     protected function register( string $classname ): Entity|\WP_Error {
         try {
@@ -87,7 +81,6 @@ final class Entity_Manager {
             $models = $this->get_models( $classname );
             $entity = new Entity( ...$models );
 
-            // @phpstan-ignore-next-line
             $this->entities[ $entity->name ] = $entity;
 
             $entity->add_hooks();
@@ -102,8 +95,8 @@ final class Entity_Manager {
     /**
      * Get entity definitions for a class.
      *
-     * @param  class-string<T> $target Target classname.
-     * @return array<Model>
+     * @param  class-string<TData> $target Target classname.
+     * @return array<Model<TData, TDstr, TFact, TMeta>>>
      */
     protected function get_models( string $target ): array {
         $defs  = array();
