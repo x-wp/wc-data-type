@@ -19,6 +19,12 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
     use Repo\Meta_Handler;
     use Repo\Term_Handler;
     use Repo\Lookup_Handler;
+
+    /**
+     * Query handler trait.
+     *
+     * @use Repo\Query_Handler<T>
+     */
     use Repo\Query_Handler;
 
     protected string $object_type;

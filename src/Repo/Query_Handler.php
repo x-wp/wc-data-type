@@ -28,6 +28,12 @@ trait Query_Handler {
         return \xwp_array_diff_assoc( $vars, 'return', 'limit' );
     }
 
+    protected function is_date_prop( $prop ) {
+        $type = $this->get_object_args()['prop_types'][ $prop ] ?? 'string';
+
+        return \str_starts_with( $type, 'date' );
+    }
+
     protected function get_core_query_args( array $vars ): array {
         $dates = array();
         $colq  = array();
@@ -37,6 +43,10 @@ trait Query_Handler {
                 continue;
             }
 
+            if ( $this->is_date_prop( $prop ) ) {
+                $dates[] = $prop;
+            }
+
             $colq[ $col ] = $vars[ $prop ];
             unset( $vars[ $prop ] );
         }
@@ -44,6 +54,22 @@ trait Query_Handler {
         $vars['col_query'] = $colq;
 
         return $this->get_date_query_args( $vars, $dates );
+    }
+
+    protected function get_date_query_args( array $vars, array $dates ): array {
+        if ( ! $dates ) {
+            return $vars;
+        }
+
+        foreach ( $dates as $index => $key ) {
+            $vars = $this->parse_date_for_wp_query( $vars['col_query'][ $key ], 'post_date', $vars );
+
+            $vars['date_query'][ $index ]['column'] = "{$this->get_table()}.{$key}";
+
+            unset( $vars['col_query'][ $key ] );
+        }
+
+        return $vars;
     }
 
     protected function get_meta_query_args( array $vars ): array {
@@ -59,22 +85,6 @@ trait Query_Handler {
         return parent::get_wp_query_args( $vars );
     }
 
-    protected function get_date_query_args( array $vars, array $dates ): array {
-        if ( ! $dates ) {
-            return $vars;
-        }
-
-        foreach ( $dates as $index => $key ) {
-            $vars = $this->parse_date_for_wp_query( $vars[ $key ], 'post_date', $vars );
-
-            $vars['date_query'][ $index ]['column'] = $key;
-
-            unset( $vars[ $key ] );
-        }
-
-        return $vars;
-    }
-
     /**
      * Query for objects.
      *
@@ -85,13 +95,11 @@ trait Query_Handler {
         $retn = $vars['return'] ?? 'ids';
         $vars = $this->get_data_query_args( $vars );
 
-        $query = 0 === \count( $vars['errors'] ?? array() )
-            ? new \XWC_Object_Query( ...$vars )
-            : (object) array( 'objects' => array(), 'total' => 0, 'pages' => 0 );
+        $query = $this->get_query( $vars );
 
         $objects = 'ids' !== $retn ? $this->remap_objects( $query->objects ) : $query->objects;
 
-        if ( ! isset( $vars['paginate'] ) ) {
+        if ( ! ( $vars['paginate'] ?? false ) ) {
             return $objects;
         }
 
@@ -100,6 +108,26 @@ trait Query_Handler {
             'pages'   => $query->pages,
             'total'   => $query->total,
         );
+    }
+
+    /**
+     * Get the query object.
+     *
+     * @param  array                       $vars
+     * @return \XWC_Object_Query|object{objects: array<int|array<string,mixed>>, total: int, pages: int}
+     */
+    private function get_query( array $vars ): \XWC_Object_Query|\stdClass {
+        if ( 0 === \count( $vars['errors'] ?? array() ) ) {
+            return new \XWC_Object_Query( ...$vars );
+        }
+
+        $res = new \stdClass();
+
+        $res->objects = array();
+        $res->total   = 0;
+        $res->pages   = 0;
+
+        return $res;
     }
 
     /**

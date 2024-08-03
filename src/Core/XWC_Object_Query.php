@@ -23,7 +23,7 @@ class XWC_Object_Query {
     /**
      * The objects being iterated over.
      *
-     * @var array<int, \stdClass|int>
+     * @var array<int, stdClass|int>
      */
     public ?array $objects = null;
 
@@ -173,11 +173,15 @@ class XWC_Object_Query {
             )
         );
 
-        if ( ! \count( $cols ) ) {
+        if ( \count( $cols ) ) {
+            $clauses['where'] .= $this->get_sql_where_clauses( $cols, $q['relation'] ?? 'AND' );
+        }
+
+        if ( ! isset( $q['date_query'] ) ) {
             return;
         }
 
-        $clauses['where'] .= $this->get_sql_where_clauses( $cols, $q['relation'] ?? 'AND' );
+        $clauses['where'] .= ( new \WP_Date_Query( $q['date_query'] ) )->get_sql();
     }
 
     protected function init_terms( array &$clauses, array $q ) {

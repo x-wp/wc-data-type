@@ -2,7 +2,7 @@
 /**
  * Object utilities.
  *
- * @package
+ * @package eXtended WooCommerce
  */
 
 /**
@@ -12,6 +12,11 @@
  * @return XWC_Data_Store_XT
  */
 function xwc_data_store( string $name ) {
+    /**
+     * Data stores cache.
+     *
+     * @var array<string, XWC_Data_Store_XT> $wcds
+     */
     static $wcds = array();
 
     return $wcds[ $name ] ??= WC_Data_Store::load( $name );
@@ -66,9 +71,10 @@ function xwc_get_object_classname( int $id, string $name ): string {
 /**
  * Get a data object instance by ID and type.
  *
+ * @template T of XWC_Data
  * @param  int    $id   Object ID.
  * @param  string $type Object type.
- * @return XWC_Data
+ * @return T of XWC_Data
  */
 function xwc_get_object_instance( int $id, string $type ): XWC_Data {
 	$classname = xwc_get_object_classname( $id, $type );
