@@ -71,10 +71,9 @@ function xwc_get_object_classname( int $id, string $name ): string {
 /**
  * Get a data object instance by ID and type.
  *
- * @template T of XWC_Data
  * @param  int    $id   Object ID.
  * @param  string $type Object type.
- * @return T of XWC_Data
+ * @return XWC_Data
  */
 function xwc_get_object_instance( int $id, string $type ): XWC_Data {
 	$classname = xwc_get_object_classname( $id, $type );

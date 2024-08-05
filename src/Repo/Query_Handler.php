@@ -114,7 +114,7 @@ trait Query_Handler {
      * Get the query object.
      *
      * @param  array                       $vars
-     * @return \XWC_Object_Query|object{objects: array<int|array<string,mixed>>, total: int, pages: int}
+     * @return \XWC_Object_Query|\stdClass{objects: array<int|array<string,mixed>>, total: int, pages: int}
      */
     private function get_query( array $vars ): \XWC_Object_Query|\stdClass {
         if ( 0 === \count( $vars['errors'] ?? array() ) ) {
