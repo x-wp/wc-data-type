@@ -8,22 +8,31 @@
 /**
  * Get an entity data store
  *
- * @param  string        $name Entity name.
- * @return XWC_Data_Store_XT
+ * @template T of XWC_Data_Store_XT
+ * @param  string          $name Entity name.
+ * @param  class-string<T> $cn   Data store class name.
+ * @return WC_Data_Store<T>
  */
-function xwc_data_store( string $name ) {
-    /**
-     * Data stores cache.
-     *
-     * @var array<string, XWC_Data_Store_XT> $wcds
-     */
-    static $wcds = array();
-
-    return $wcds[ $name ] ??= WC_Data_Store::load( $name );
+function xwc_data_store( string $name, string $cn = XWC_Data_Store_XT::class ) {
+    // @phpstan-ignore return.type, arguments.count
+    return WC_Data_Store::load( $name, $cn );
 }
 
+/**
+ * Get an object factory
+ *
+ * @param  string $name Object type.
+ * @return XWC_Object_Factory
+ */
 function xwc_get_object_factory( string $name ): XWC_Object_Factory {
-    return xwc_get_entity( $name )->factory;
+    /**
+     * Override var type
+     *
+     * @var XWC_Object_Factory $f
+     */
+    $f = xwc_get_entity( $name )->factory;
+
+    return $f;
 }
 
 /**

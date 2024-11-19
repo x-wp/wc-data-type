@@ -29,6 +29,8 @@ use XWC\Data\Model\Prop_Setters;
  *  - `binary`    - A hex string which will be converted to binary when saved to the database
  *
  * @method XWC_Data_Store_XT<static> get_data_store() Get the data store object.
+ *
+ * @template TDs of XWC_Data_Store_XT
  */
 abstract class XWC_Data extends WC_Data implements WC_Data_Definition {
     /**
@@ -43,7 +45,7 @@ abstract class XWC_Data extends WC_Data implements WC_Data_Definition {
     /**
      * Data store object.
      *
-     * @var XWC_Data_Store_XT
+     * @var WC_Data_Store<TDs>
      */
     protected $data_store;
 
@@ -90,6 +92,7 @@ abstract class XWC_Data extends WC_Data implements WC_Data_Definition {
      * Load the data for this object from the database.
      */
     public function load_data_store() {
+        // @phpstan-ignore assign.propertyType
         $this->data_store = xwc_data_store( $this->object_type );
     }
 

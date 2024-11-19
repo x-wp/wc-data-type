@@ -4,8 +4,301 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "41c8235c7efcd2f2f1fa140eba7b6128",
+    "content-hash": "33059d5784a3d21e4506654e0e6e0c24",
     "packages": [
+        {
+            "name": "automattic/jetpack-constants",
+            "version": "v2.0.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Automattic/jetpack-constants.git",
+                "reference": "f6958c313a34c5e92171c45a57d9dc978e5975ed"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Automattic/jetpack-constants/zipball/f6958c313a34c5e92171c45a57d9dc978e5975ed",
+                "reference": "f6958c313a34c5e92171c45a57d9dc978e5975ed",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.0"
+            },
+            "require-dev": {
+                "automattic/jetpack-changelogger": "^4.2.6",
+                "brain/monkey": "2.6.1",
+                "yoast/phpunit-polyfills": "^1.1.1"
+            },
+            "suggest": {
+                "automattic/jetpack-autoloader": "Allow for better interoperability with other plugins that use this package."
+            },
+            "type": "jetpack-library",
+            "extra": {
+                "autotagger": true,
+                "mirror-repo": "Automattic/jetpack-constants",
+                "changelogger": {
+                    "link-template": "https://github.com/Automattic/jetpack-constants/compare/v${old}...v${new}"
+                },
+                "branch-alias": {
+                    "dev-trunk": "2.0.x-dev"
+                }
+            },
+            "autoload": {
+                "classmap": [
+                    "src/"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "description": "A wrapper for defining constants in a more testable way.",
+            "support": {
+                "source": "https://github.com/Automattic/jetpack-constants/tree/v2.0.4"
+            },
+            "time": "2024-08-23T14:28:14+00:00"
+        },
+        {
+            "name": "laravel/serializable-closure",
+            "version": "v1.3.5",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laravel/serializable-closure.git",
+                "reference": "1dc4a3dbfa2b7628a3114e43e32120cce7cdda9c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laravel/serializable-closure/zipball/1dc4a3dbfa2b7628a3114e43e32120cce7cdda9c",
+                "reference": "1dc4a3dbfa2b7628a3114e43e32120cce7cdda9c",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.3|^8.0"
+            },
+            "require-dev": {
+                "illuminate/support": "^8.0|^9.0|^10.0|^11.0",
+                "nesbot/carbon": "^2.61|^3.0",
+                "pestphp/pest": "^1.21.3",
+                "phpstan/phpstan": "^1.8.2",
+                "symfony/var-dumper": "^5.4.11|^6.2.0|^7.0.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Laravel\\SerializableClosure\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Taylor Otwell",
+                    "email": "taylor@laravel.com"
+                },
+                {
+                    "name": "Nuno Maduro",
+                    "email": "nuno@laravel.com"
+                }
+            ],
+            "description": "Laravel Serializable Closure provides an easy and secure way to serialize closures in PHP.",
+            "keywords": [
+                "closure",
+                "laravel",
+                "serializable"
+            ],
+            "support": {
+                "issues": "https://github.com/laravel/serializable-closure/issues",
+                "source": "https://github.com/laravel/serializable-closure"
+            },
+            "time": "2024-09-23T13:33:08+00:00"
+        },
+        {
+            "name": "php-di/invoker",
+            "version": "2.3.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/PHP-DI/Invoker.git",
+                "reference": "33234b32dafa8eb69202f950a1fc92055ed76a86"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/PHP-DI/Invoker/zipball/33234b32dafa8eb69202f950a1fc92055ed76a86",
+                "reference": "33234b32dafa8eb69202f950a1fc92055ed76a86",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.3",
+                "psr/container": "^1.0|^2.0"
+            },
+            "require-dev": {
+                "athletic/athletic": "~0.1.8",
+                "mnapoli/hard-mode": "~0.3.0",
+                "phpunit/phpunit": "^9.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Invoker\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Generic and extensible callable invoker",
+            "homepage": "https://github.com/PHP-DI/Invoker",
+            "keywords": [
+                "callable",
+                "dependency",
+                "dependency-injection",
+                "injection",
+                "invoke",
+                "invoker"
+            ],
+            "support": {
+                "issues": "https://github.com/PHP-DI/Invoker/issues",
+                "source": "https://github.com/PHP-DI/Invoker/tree/2.3.4"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/mnapoli",
+                    "type": "github"
+                }
+            ],
+            "time": "2023-09-08T09:24:21+00:00"
+        },
+        {
+            "name": "php-di/php-di",
+            "version": "7.0.7",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/PHP-DI/PHP-DI.git",
+                "reference": "e87435e3c0e8f22977adc5af0d5cdcc467e15cf1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/PHP-DI/PHP-DI/zipball/e87435e3c0e8f22977adc5af0d5cdcc467e15cf1",
+                "reference": "e87435e3c0e8f22977adc5af0d5cdcc467e15cf1",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/serializable-closure": "^1.0",
+                "php": ">=8.0",
+                "php-di/invoker": "^2.0",
+                "psr/container": "^1.1 || ^2.0"
+            },
+            "provide": {
+                "psr/container-implementation": "^1.0"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "^3",
+                "friendsofphp/proxy-manager-lts": "^1",
+                "mnapoli/phpunit-easymock": "^1.3",
+                "phpunit/phpunit": "^9.5",
+                "vimeo/psalm": "^4.6"
+            },
+            "suggest": {
+                "friendsofphp/proxy-manager-lts": "Install it if you want to use lazy injection (version ^1)"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "src/functions.php"
+                ],
+                "psr-4": {
+                    "DI\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "The dependency injection container for humans",
+            "homepage": "https://php-di.org/",
+            "keywords": [
+                "PSR-11",
+                "container",
+                "container-interop",
+                "dependency injection",
+                "di",
+                "ioc",
+                "psr11"
+            ],
+            "support": {
+                "issues": "https://github.com/PHP-DI/PHP-DI/issues",
+                "source": "https://github.com/PHP-DI/PHP-DI/tree/7.0.7"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/mnapoli",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/php-di/php-di",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2024-07-21T15:55:45+00:00"
+        },
+        {
+            "name": "psr/container",
+            "version": "2.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-fig/container.git",
+                "reference": "c71ecc56dfe541dbd90c5360474fbc405f8d5963"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-fig/container/zipball/c71ecc56dfe541dbd90c5360474fbc405f8d5963",
+                "reference": "c71ecc56dfe541dbd90c5360474fbc405f8d5963",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.4.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Psr\\Container\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PHP-FIG",
+                    "homepage": "https://www.php-fig.org/"
+                }
+            ],
+            "description": "Common Container Interface (PHP FIG PSR-11)",
+            "homepage": "https://github.com/php-fig/container",
+            "keywords": [
+                "PSR-11",
+                "container",
+                "container-interface",
+                "container-interop",
+                "psr"
+            ],
+            "support": {
+                "issues": "https://github.com/php-fig/container/issues",
+                "source": "https://github.com/php-fig/container/tree/2.0.2"
+            },
+            "time": "2021-11-05T16:47:00+00:00"
+        },
         {
             "name": "symfony/polyfill-php81",
             "version": "v1.30.0",
@@ -83,17 +376,88 @@
             "time": "2024-06-19T12:30:46+00:00"
         },
         {
-            "name": "x-wp/helper-classes",
-            "version": "v1.4.0",
+            "name": "x-wp/di",
+            "version": "v1.0.0-beta.8",
             "source": {
                 "type": "git",
-                "url": "https://github.com/x-wp/helper-classes.git",
-                "reference": "eedcf468f739d7f07ce727de8d2eda5351ff4ba3"
+                "url": "https://github.com/x-wp/di.git",
+                "reference": "5c6928fcc9181e3221c87a46f01234f59971a67a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/x-wp/helper-classes/zipball/eedcf468f739d7f07ce727de8d2eda5351ff4ba3",
-                "reference": "eedcf468f739d7f07ce727de8d2eda5351ff4ba3",
+                "url": "https://api.github.com/repos/x-wp/di/zipball/5c6928fcc9181e3221c87a46f01234f59971a67a",
+                "reference": "5c6928fcc9181e3221c87a46f01234f59971a67a",
+                "shasum": ""
+            },
+            "require": {
+                "automattic/jetpack-constants": "^2",
+                "php": ">=8.0",
+                "php-di/php-di": "^7",
+                "x-wp/helper-classes": "^1.13",
+                "x-wp/helper-functions": "^1.13"
+            },
+            "provide": {
+                "x-wp/di-implementation": "^1.0"
+            },
+            "require-dev": {
+                "oblak/wordpress-coding-standard": "^1.1",
+                "php-stubs/wordpress-stubs": "^6.6",
+                "phpstan/extension-installer": "^1.4",
+                "phpstan/phpstan": "^1.12",
+                "phpstan/phpstan-deprecation-rules": "^1.2",
+                "swissspidy/phpstan-no-private": "^0.2",
+                "szepeviktor/phpstan-wordpress": "^1.3"
+            },
+            "suggest": {
+                "automattic/jetpack-autoloader": "Allow for better interoperability with other plugins that use this package."
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "src/Functions/xwp-di-container-fns.php",
+                    "src/Functions/xwp-di-helper-fns.php"
+                ],
+                "psr-4": {
+                    "XWP\\DI\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPL-2.0-only"
+            ],
+            "authors": [
+                {
+                    "name": "Sibin Grasic",
+                    "email": "sibin.grasic@oblak.studio"
+                }
+            ],
+            "description": "Provides standardized way to declare and invoke WordPress hooks",
+            "keywords": [
+                "actions",
+                "extended-wp",
+                "filters",
+                "hook-manager",
+                "hooks",
+                "wordpress"
+            ],
+            "support": {
+                "issues": "https://github.com/x-wp/hook-manager/issues",
+                "source": "https://github.com/x-wp/di/tree/v1.0.0-beta.8"
+            },
+            "time": "2024-10-14T06:17:14+00:00"
+        },
+        {
+            "name": "x-wp/helper-classes",
+            "version": "v1.16.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/x-wp/helper-classes.git",
+                "reference": "451dff53964c2fbdf086882c868709e4e36fb1cd"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/x-wp/helper-classes/zipball/451dff53964c2fbdf086882c868709e4e36fb1cd",
+                "reference": "451dff53964c2fbdf086882c868709e4e36fb1cd",
                 "shasum": ""
             },
             "require": {
@@ -107,7 +471,10 @@
             "autoload": {
                 "psr-4": {
                     "XWP\\Helper\\Classes\\": ""
-                }
+                },
+                "classmap": [
+                    "WP/"
+                ]
             },
             "notification-url": "https://packagist.org/downloads/",
             "license": [
@@ -131,22 +498,22 @@
             ],
             "support": {
                 "issues": "https://github.com/x-wp/helper-classes/issues",
-                "source": "https://github.com/x-wp/helper-classes/tree/v1.4.0"
+                "source": "https://github.com/x-wp/helper-classes/tree/v1.16.0"
             },
-            "time": "2024-06-25T21:05:07+00:00"
+            "time": "2024-09-23T14:31:15+00:00"
         },
         {
             "name": "x-wp/helper-functions",
-            "version": "v1.4.0",
+            "version": "v1.16.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/x-wp/helper-functions.git",
-                "reference": "92731d8a7e3db5c8f34c6b71b887f27e8f0a0a55"
+                "reference": "1c46f8a33c17c8712c4811f8545eaf625ad040e8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/x-wp/helper-functions/zipball/92731d8a7e3db5c8f34c6b71b887f27e8f0a0a55",
-                "reference": "92731d8a7e3db5c8f34c6b71b887f27e8f0a0a55",
+                "url": "https://api.github.com/repos/x-wp/helper-functions/zipball/1c46f8a33c17c8712c4811f8545eaf625ad040e8",
+                "reference": "1c46f8a33c17c8712c4811f8545eaf625ad040e8",
                 "shasum": ""
             },
             "require": {
@@ -158,10 +525,12 @@
             "type": "library",
             "autoload": {
                 "files": [
-                    "xwp-helper-fns.php"
+                    "xwp-helper-fns.php",
+                    "xwp-helper-fns-num.php",
+                    "xwp-helper-fns-req.php"
                 ],
                 "psr-4": {
-                    "XWP\\Helper\\Functions\\": ""
+                    "XWP\\Helper\\Functions\\": "."
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -186,22 +555,22 @@
             ],
             "support": {
                 "issues": "https://github.com/x-wp/helper-functions/issues",
-                "source": "https://github.com/x-wp/helper-functions/tree/v1.4.0"
+                "source": "https://github.com/x-wp/helper-functions/tree/v1.16.0"
             },
-            "time": "2024-06-06T21:25:23+00:00"
+            "time": "2024-10-17T20:47:30+00:00"
         },
         {
             "name": "x-wp/helper-traits",
-            "version": "v1.4.0",
+            "version": "v1.16.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/x-wp/helper-traits.git",
-                "reference": "b99bcb6f2fadeedba30fc63abe39aa8e88e0949f"
+                "reference": "0367d136d6ba36e2ae0fe1854584ef760ea7cae9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/x-wp/helper-traits/zipball/b99bcb6f2fadeedba30fc63abe39aa8e88e0949f",
-                "reference": "b99bcb6f2fadeedba30fc63abe39aa8e88e0949f",
+                "url": "https://api.github.com/repos/x-wp/helper-traits/zipball/0367d136d6ba36e2ae0fe1854584ef760ea7cae9",
+                "reference": "0367d136d6ba36e2ae0fe1854584ef760ea7cae9",
                 "shasum": ""
             },
             "require": {
@@ -238,9 +607,9 @@
             ],
             "support": {
                 "issues": "https://github.com/x-wp/helper-traits/issues",
-                "source": "https://github.com/x-wp/helper-traits/tree/v1.4.0"
+                "source": "https://github.com/x-wp/helper-traits/tree/v1.16.0"
             },
-            "time": "2024-05-26T16:39:47+00:00"
+            "time": "2024-09-18T12:43:44+00:00"
         }
     ],
     "packages-dev": [
@@ -1392,9 +1761,9 @@
         }
     ],
     "aliases": [],
-    "minimum-stability": "stable",
+    "minimum-stability": "beta",
     "stability-flags": [],
-    "prefer-stable": false,
+    "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
         "php": ">=8.0"

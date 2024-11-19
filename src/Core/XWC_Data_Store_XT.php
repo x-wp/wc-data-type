@@ -106,7 +106,16 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
         return $this->meta_store;
     }
 
-    public function __construct( Entity $e ) {
+    /**
+     * Initialize the data store.
+     *
+     * @template TDs of XWC_Data_Store_XT<T,M>
+     * @template TFc of XWC_Object_Factory<T>
+     *
+     * @param  Entity<T,TDs,TFc,M> $e Entity object.
+     * @return static
+     */
+    public function initialize( Entity $e ): static {
         $this->object_type   = $e->name;
         $this->table         = $e->table;
         $this->id_field      = $e->id_field;
@@ -123,6 +132,8 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
             'prop_types'  => $e->prop_types,
             'unique_data' => $e->unique_data,
         );
+
+        return $this;
     }
 
     /**
@@ -145,6 +156,7 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
         $this->update_prop_data( $data );
         $this->update_meta_data( $data );
         $this->update_extra_data( $data );
+        $this->update_custom_data( $data );
 		$this->update_cache_data( $data );
 
         $data->apply_changes();
@@ -248,6 +260,7 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
         $this->update_prop_data( $data );
         $this->update_meta_data( $data );
         $this->update_extra_data( $data );
+        $this->update_custom_data( $data );
         $this->update_cache_data( $data );
 
         $data->apply_changes();
@@ -392,4 +405,13 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
 	protected function update_cache_data( &$data ) {
 		\WC_Cache_Helper::invalidate_cache_group( $this->get_object_type() . '_' . $data->get_id() );
 	}
+
+    /**
+     * Update custom data.
+     *
+     * @param T $data Data object.
+     */
+    protected function update_custom_data( &$data ) {
+        // Placeholder for custom data update.
+    }
 }

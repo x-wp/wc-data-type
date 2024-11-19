@@ -99,6 +99,13 @@ class Entity {
      */
     protected string $data_store;
 
+    /**
+     * XWP-DI Container ID.
+     *
+     * @var string
+     */
+    protected string $container;
+
     protected string $factory;
     protected array $core_props;
     protected string $id_field;
@@ -209,9 +216,14 @@ class Entity {
             return null;
         }
 
+        /**
+         * Variable override.
+         *
+         * @var class-string<TMeta<TData>> $cname
+         */
         $cname = $this->meta_store;
 
-        return $this->args['msc'] ??= new $cname();
+        return $this->args['msc'] ??= $this->make( $cname );
     }
 
     protected function get_has_meta(): bool {
@@ -226,7 +238,7 @@ class Entity {
     protected function get_data_store() {
         $cname = $this->data_store;
 
-        return static::$stores[ $this->name ] ??= new $cname( $this );
+        return static::$stores[ $this->name ] ??= $this->make( $cname )->initialize( $this );
     }
 
     public function add_hooks() {
@@ -240,5 +252,18 @@ class Entity {
             $stores,
             \array_combine( $to_add, \array_fill( 0, \count( $to_add ), null ) ),
         );
+    }
+
+    /**
+     * Make an instance of a class.
+     *
+     * @template TObj of XWC_Data_Store_XT|XWC_Meta_Store
+     * @param  class-string<TObj> $cname Class name.
+     * @return TObj
+     */
+    private function make( string $cname ): object {
+        return $this->container
+            ? \xwp_app( $this->container )->make( $cname )
+            : new $cname();
     }
 }

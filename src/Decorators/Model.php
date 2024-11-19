@@ -52,16 +52,17 @@ class Model {
     }
 
     /**
-     * Undocumented function
+     * Constructor.
      *
-     * @param  string      $name
-     * @param  string      $table
-     * @param  array       $core_props
-     * @param  array       $meta_props
-     * @param  string      $id_field
-     * @param  class-string<TDstr>|null $data_store
-     * @param  class-string<TFact>|null $factory
-     * @param  class-string<TMeta>|null $meta_store
+     * @param  string                   $name       Data object name.
+     * @param  string                   $table      Database table name.
+     * @param  array                    $core_props Array of core properties.
+     * @param  array                    $meta_props Array of meta properties.
+     * @param  string                   $id_field   ID field column name.
+     * @param  class-string<TDstr>|null $data_store Data store class name.
+     * @param  class-string<TFact>|null $factory    Object factory class name.
+     * @param  class-string<TMeta>|null $meta_store Meta store class name.
+     * @param  string|null              $container  XWP-DI Container ID.
      */
     public function __construct(
         string $name,
@@ -72,6 +73,7 @@ class Model {
         ?string $data_store = null,
         ?string $factory = null,
         ?string $meta_store = null,
+        ?string $container = null,
     ) {
         $this->name = $name;
         $this->scaffold(
@@ -83,6 +85,7 @@ class Model {
                 'id_field',
                 'meta_store',
                 'meta_props',
+                'container',
             ),
         );
     }
@@ -96,6 +99,7 @@ class Model {
             'meta_props' => 'set_meta_props',
             'meta_store' => 'set_meta_store',
             'id_field'   => 'set_id_field',
+            'container'  => 'set_container',
         );
     }
 
@@ -225,5 +229,9 @@ class Model {
 
     protected function set_id_field( string $field ): string {
         return $field;
+    }
+
+    protected function set_container( ?string $container ): string {
+        return $container ?? '';
     }
 }
