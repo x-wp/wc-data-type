@@ -44,6 +44,10 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
 
     protected array $meta_to_props = array();
 
+    protected array $tax_to_props = array();
+
+    protected array $tax_fields = array();
+
     /**
 	 * Data stored in meta keys, but not considered "meta" for an object.
 	 *
@@ -66,10 +70,12 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
      * Undocumented function
      *
      * @return array{
-     *   core_data: array<string, mixed>,
-     *   data: array<string, mixed>,
-     *   prop_types: array<string, string>,
+     *   core_data: array<string,mixed>,
+     *   data: array<string,mixed>,
+     *   tax_data: array<string,mixed>,
+     *   prop_types: array<string,string>,
      *   unique_data: array<string>,
+     *   required_data: array<string>,
      * }
      */
     public function get_object_args(): array {
@@ -97,6 +103,14 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
         return $this->meta_to_props;
     }
 
+    public function get_tax_to_props(): array {
+        return $this->tax_to_props;
+    }
+
+    public function get_tax_fields(): array {
+        return $this->tax_fields;
+    }
+
     /**
      * Get the meta store.
      *
@@ -121,16 +135,20 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
         $this->id_field      = $e->id_field;
         $this->cols_to_props = $e->cols_to_props;
         $this->meta_to_props = $e->meta_to_props;
+        $this->tax_to_props  = $e->tax_to_props;
+        $this->tax_fields    = $e->tax_fields;
         $this->meta_store    = $e->meta_store;
 
         $this->internal_meta_keys = \array_keys( $this->meta_to_props );
 
         $this->object_args = array(
-            'core_data'   => $e->core_data,
-            'data'        => $e->data,
-            'has_meta'    => $e->has_meta,
-            'prop_types'  => $e->prop_types,
-            'unique_data' => $e->unique_data,
+            'core_data'     => $e->core_data,
+            'data'          => $e->data,
+            'has_meta'      => $e->has_meta,
+            'prop_types'    => $e->prop_types,
+            'required_data' => $e->required_data,
+            'tax_data'      => $e->tax_data,
+            'unique_data'   => $e->unique_data,
         );
 
         return $this;
@@ -155,6 +173,7 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
 
         $this->update_prop_data( $data );
         $this->update_meta_data( $data );
+        $this->update_term_data( $data, true );
         $this->update_extra_data( $data );
         $this->update_custom_data( $data );
 		$this->update_cache_data( $data );
@@ -200,6 +219,7 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
     public function read( &$data ) {
         $this->read_core_data( $data );
         $this->read_prop_data( $data );
+        $this->read_term_data( $data );
         $this->read_extra_data( $data );
 
         $data->set_object_read( true );
@@ -259,6 +279,7 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
 
         $this->update_prop_data( $data );
         $this->update_meta_data( $data );
+        $this->update_term_data( $data );
         $this->update_extra_data( $data );
         $this->update_custom_data( $data );
         $this->update_cache_data( $data );
@@ -292,7 +313,7 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
         $wpdb->delete( $this->get_table(), array( $this->get_id_field() => $data->get_id() ) );
 
         $this->delete_all_meta( $data );
-        $this->delete_terms( $obj_id );
+        $this->delete_term_data( $data );
 
         $data->set_id( 0 );
 

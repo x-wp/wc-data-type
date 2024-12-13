@@ -23,6 +23,13 @@ use XWC_Object_Factory;
  * @property-read string $id_field   ID field name. Default 'id'.
  * @property-read array  $core_props Core properties.
  * @property-read array  $meta_props Meta properties. Optional.
+ * @property-read array<string,array{
+ *   type: string,
+ *   tax: string,
+ *   default: string,
+ *   single: bool,
+ *   return: string,
+ * }>                    $tax_props  Taxonomy properties.
  * @property-read bool   $has_meta   Has meta data.
  *
  * Stores and classnames.
@@ -33,12 +40,16 @@ use XWC_Object_Factory;
  *
  * Custom data.
  *
- * @property-read array<string, mixed>  $core_data          Core data.
- * @property-read array<string, mixed>  $data               Data.
- * @property-read array<string, string> $prop_types         Property types.
- * @property-read array<string, bool>   $unique_data        Unique data.
- * @property-read array<string, string> $cols_to_props      Column names to property names.
- * @property-read array<string, string> $meta_to_props      Meta keys to property names.
+ * @property-read array<string,mixed>  $core_data     Core data.
+ * @property-read array<string,mixed>  $tax_data      Taxonomy data.
+ * @property-read array<string,mixed>  $data          Data.
+ * @property-read array<string,string> $prop_types    Property types.
+ * @property-read array<string,bool>   $unique_data   Unique data.
+ * @property-read array<string,string> $required_data Column names to property names.
+ * @property-read array<string,string> $cols_to_props Column names to property names.
+ * @property-read array<string,string> $meta_to_props Meta keys to property names.
+ * @property-read array<string,string> $tax_to_props  Taxonomy keys to property names.
+ * @property-read array<string,string> $tax_fields    Taxonomy fields.
  */
 class Entity {
     private const FIELDS = array(
@@ -51,12 +62,17 @@ class Entity {
         'id_field',
         'meta_store',
         'meta_props',
+        'tax_props',
         'core_data',
         'data',
+        'tax_data',
         'prop_types',
         'unique_data',
+        'required_data',
         'cols_to_props',
         'meta_to_props',
+        'tax_to_props',
+        'tax_fields',
         'has_meta',
 	);
 
@@ -111,18 +127,7 @@ class Entity {
     protected string $id_field;
     protected ?string $meta_store;
     protected ?array $meta_props;
-
-    protected array $args = array(
-        'core' => null,
-        'ctp'  => null,
-        'data' => null,
-        'fct'  => null,
-        'imk'  => null,
-        'msc'  => null,
-        'mtp'  => null,
-        'pt'   => null,
-        'unq'  => null,
-    );
+    protected ?array $tax_props;
 
     /**
      * Constructor.
@@ -174,32 +179,52 @@ class Entity {
     }
 
     protected function get_core_data(): array {
-        return $this->args['core'] ??= \wp_list_pluck( $this->core_props, 'default' );
+        return \wp_list_pluck( $this->core_props, 'default' );
     }
 
     protected function get_data(): array {
-        return $this->args['data'] ??= \wp_list_pluck( $this->meta_props, 'default' );
+        return \wp_list_pluck( $this->meta_props, 'default' );
+    }
+
+    protected function get_tax_data(): array {
+        return \wp_list_pluck( $this->tax_props, 'default' );
     }
 
     protected function get_prop_types(): array {
-        return $this->args['pt'] ??= \array_merge(
+        return \array_merge(
             \wp_list_pluck( $this->core_props, 'type' ),
             \wp_list_pluck( $this->meta_props, 'type' ),
+            \wp_list_pluck( $this->tax_props, 'type' ),
         );
     }
 
     protected function get_unique_data(): array {
-        return $this->args['unq'] ??= \array_keys(
+        return \array_keys(
             \wp_list_filter( $this->core_props, array( 'unique' => true ) ),
         );
     }
 
+    protected function get_required_data(): array {
+        return \wp_list_pluck(
+            \wp_list_filter( $this->core_props, array( 'required' => true ) ),
+            'required',
+        );
+    }
+
     protected function get_meta_to_props(): array {
-        return $this->args['mtp'] ??= \array_flip( \wp_list_pluck( $this->meta_props, 'name' ) );
+        return \array_flip( \wp_list_pluck( $this->meta_props, 'name' ) );
     }
 
     protected function get_cols_to_props(): array {
-        return $this->args['ctp'] ??= \wp_list_pluck( $this->core_props, 'name' );
+        return \wp_list_pluck( $this->core_props, 'name' );
+    }
+
+    protected function get_tax_to_props(): array {
+        return \array_flip( \wp_list_pluck( $this->tax_props, 'taxonomy' ) );
+    }
+
+    protected function get_tax_fields(): array {
+        return \wp_list_pluck( $this->tax_props, 'field', 'taxonomy' );
     }
 
     protected function get_factory(): XWC_Object_Factory {
@@ -223,7 +248,7 @@ class Entity {
          */
         $cname = $this->meta_store;
 
-        return $this->args['msc'] ??= $this->make( $cname );
+        return $this->make( $cname );
     }
 
     protected function get_has_meta(): bool {

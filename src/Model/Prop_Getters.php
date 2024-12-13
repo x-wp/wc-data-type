@@ -1,4 +1,4 @@
-<?php
+<?php //phpcs:disable WordPress.PHP.DiscouragedPHPFunctions
 
 namespace XWC\Data\Model;
 
@@ -19,6 +19,8 @@ trait Prop_Getters {
      */
     protected array $core_data = array();
 
+    protected array $tax_data = array();
+
     /**
      * Array linking props to their types.
      *
@@ -33,9 +35,26 @@ trait Prop_Getters {
      */
     protected array $unique_data = array();
 
-    protected function is_binary_string( string $value ): bool {
+    /**
+     * Props that must be set.
+     *
+     * @var array<string>
+     */
+    protected array $required_data = array();
+
+    protected function is_binary_string( ?string $value ): bool {
         //phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-		return ! (bool) @\mb_check_encoding( $value, 'UTF-8' );
+		return ! (bool) @\mb_check_encoding( $value ?? '', 'UTF-8' );
+    }
+
+    protected function is_base64_string( ?string $value ): bool {
+        if ( ! \is_string( $value ) ) {
+            return false;
+        }
+
+        $dec = \base64_decode( $value, true );
+
+        return false !== $dec && \base64_encode( $dec ) === $value;
     }
 
     public function get_prop_group( string $prop ): string {
@@ -56,8 +75,12 @@ trait Prop_Getters {
         return $this->prop_types;
     }
 
-    protected function get_prop_type( string $prop ): string {
-        return $this->prop_types[ $prop ] ?? 'string';
+    protected function get_prop_type( string $prop ): array {
+        $types = $this->prop_types[ $prop ] ?? 'string';
+        $types = \explode( '|', $types );
+        $type  = \array_shift( $types );
+
+        return array( $type, $types );
     }
 
     protected function get_prop_by_type( string $type ): null|string|array {
@@ -135,27 +158,26 @@ trait Prop_Getters {
             return $this->get_wc_data_prop( $prop, $context );
         }
 
-        $value = $this->get_wc_data_prop( $prop, 'edit' );
-		$type  = $this->get_prop_type( $prop );
-
-        if ( \str_contains( $type, '|' ) ) {
-            [ $type ] = \explode( '|', $type );
-        }
+        $value          = $this->get_wc_data_prop( $prop, 'edit' );
+		[ $type, $sub ] = $this->get_prop_type( $prop );
 
         return match ( $type ) {
-            'string'       => $value,
-            'date'         => $this->get_date_prop( $value ),
-            'date_created' => $this->get_date_prop( $value ),
-            'date_updated' => $this->get_date_prop( $value ),
-            'bool'         => $this->get_bool_prop( $value, 'string' ),
-            'bool_int'     => $this->get_bool_prop( $value, 'int' ),
-            'array_assoc'  => $this->get_array_prop( $value, 'assoc' ),
-            'array'        => $this->get_array_prop( $value, 'normal' ),
-            'enum'         => $this->get_enum_prop( $value ),
-            'json'         => $this->get_json_prop( $value ),
-            'json_obj'     => $this->get_json_prop( $value, \JSON_FORCE_OBJECT ),
-            'binary'       => $this->get_binary_prop( $value ),
-            default        => $this->get_unknown_prop( $type, $prop, $value ),
+            'string'        => $value,
+            'date'          => $this->get_date_prop( $value ),
+            'date_created'  => $this->get_date_prop( $value ),
+            'date_updated'  => $this->get_date_prop( $value ),
+            'bool'          => $this->get_bool_prop( $value, 'string' ),
+            'bool_int'      => $this->get_bool_prop( $value, 'int' ),
+            'array_assoc'   => $this->get_array_prop( $value, 'assoc' ),
+            'array'         => $this->get_array_prop( $value, 'normal' ),
+            'term_single'   => $this->get_term_prop( $value, ...$sub ),
+            'term_array'    => $this->get_term_prop( $value, ...$sub ),
+            'enum'          => $this->get_enum_prop( $value ),
+            'json'          => $this->get_json_prop( $value ),
+            'json_obj'      => $this->get_json_prop( $value, \JSON_FORCE_OBJECT ),
+            'binary'        => $this->get_binary_prop( $value ),
+            'base64_string' => $this->get_base64_string_prop( $value ),
+            default         => $this->get_unknown_prop( $type, $prop, $value ),
         };
 	}
 
@@ -189,6 +211,23 @@ trait Prop_Getters {
     }
 
     /**
+     * Get term prop value.
+     *
+     * @param  mixed  $value Term value.
+     * @param  string $field Field which is stored in the object.
+     * @return array<int>
+     */
+    protected function get_term_prop( mixed $value, string $field, string $taxonomy ): array {
+        $value = (array) $value;
+
+        foreach ( $value as &$v ) {
+            $v = \get_term_by( $field, $v, $taxonomy );
+        }
+
+        return \array_filter( $value );
+    }
+
+    /**
      * Get enum prop value.
      *
      * @param  \BackedEnum $enum_val Enum value.
@@ -206,9 +245,13 @@ trait Prop_Getters {
         return ! $this->is_binary_string( $value ) ? \hex2bin( $value ) : $value;
     }
 
+    protected function get_base64_string_prop( ?string $value ): string {
+        return ! $this->is_base64_string( $value ) ? \base64_encode( $value ) : $value;
+    }
+
     protected function get_unknown_prop( string $type, string $prop, mixed $value ): mixed {
         if ( \method_exists( $this, "get_{$type}_prop" ) ) {
-            $value = $this->{"get_{$type}_prop"}( $prop );
+            $value = $this->{"get_{$type}_prop"}( $value, $prop );
         }
 
         /**

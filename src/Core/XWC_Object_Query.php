@@ -48,9 +48,6 @@ class XWC_Object_Query {
      */
     public ?int $pages = null;
 
-    protected array $term_props = array();
-
-
     public array $vars = array();
 
     public function __construct(
@@ -185,7 +182,7 @@ class XWC_Object_Query {
     }
 
     protected function init_terms( array &$clauses, array $q ) {
-        if ( ! $this->term_props || ! isset( $q['tax_query'] ) ) {
+        if ( ! isset( $q['tax_query'] ) || ! $q['tax_query'] ) {
             return;
         }
 

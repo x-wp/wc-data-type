@@ -16,6 +16,7 @@ class Model_Modifier extends Model {
         ?string $factory = null,
         string $meta_store = '',
         array $meta_props = array(),
+        array $tax_props = array(),
         ?string $container = null,
     ) {
         $this->name = $name;
@@ -32,6 +33,7 @@ class Model_Modifier extends Model {
                 'id_field',
                 'meta_store',
                 'meta_props',
+                'tax_props',
                 'container',
             ),
         );

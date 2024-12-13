@@ -13,6 +13,7 @@ trait Query_Handler {
     protected function get_data_query_args( array $vars ): array {
         $vars = $this->get_base_query_args( $vars );
         $vars = $this->get_core_query_args( $vars );
+        $vars = $this->get_tax_query_args( $vars );
         $vars = $this->get_meta_query_args( $vars );
 
         return $vars;
@@ -83,6 +84,35 @@ trait Query_Handler {
 		);
 
         return parent::get_wp_query_args( $vars );
+    }
+
+    protected function get_tax_query_args( array $vars ): array {
+        foreach ( $this->get_tax_to_props() as $tax => $prop ) {
+            if ( ! isset( $vars[ $prop ] ) ) {
+                continue;
+            }
+
+            $terms = array( 'IN' => array(), 'NOT IN' => array() );
+
+            foreach ( (array) $vars[ $prop ] as $term ) {
+                $key = \str_starts_with( $term, '!' ) ? 'NOT IN' : 'IN';
+
+                $terms[ $key ][] = \preg_replace( '/^!/', '', $term );
+            }
+
+            foreach ( \array_filter( $terms ) as $key => $value ) {
+                $vars['tax_query'][] = array(
+                    'field'    => $this->tax_fields[ $tax ],
+                    'operator' => $key,
+                    'taxonomy' => $tax,
+                    'terms'    => $value,
+                );
+            }
+
+            unset( $vars[ $prop ] );
+        }
+
+        return $vars;
     }
 
     /**

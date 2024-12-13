@@ -1,4 +1,4 @@
-<?php
+<?php //phpcs:disable WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
 
 namespace XWC\Data\Model;
 
@@ -15,9 +15,11 @@ trait Prop_Setters {
 	 */
 	protected $data = array();
 
-    abstract protected function get_prop_type( string $prop ): string;
+    abstract protected function get_prop_type( string $prop ): array;
 
     abstract protected function is_binary_string( string $value ): bool;
+
+    abstract protected function is_base64_string( string $value ): bool;
 
     /**
 	 * Set a collection of props in one go, collect any errors, and return the result.
@@ -74,33 +76,34 @@ trait Prop_Setters {
             return;
         }
 
-		if ( \in_array( $prop, $this->unique_data, true ) && $this->get_object_read() ) {
-			$this->check_unique_prop( $prop, $value );
-		}
-
-		$type = $this->get_prop_type( $prop );
-
-        if ( \str_contains( $type, '|' ) ) {
-            [ $type, $subtype ] = \explode( '|', $type );
+        if ( $this->get_object_read() ) {
+            $this->check_unique_prop( $prop, $value );
+            $this->check_required_prop( $prop, $value );
+            $this->check_value_prop( $prop, $value );
         }
 
+		[ $type, $sub ] = $this->get_prop_type( $prop );
+
 		match ( $type ) {
-			'date_created' => $this->set_date_prop( $prop, $value ),
-            'date_updated' => $this->set_date_prop( $prop, $value ),
-            'date'         => $this->set_date_prop( $prop, $value ),
-			'bool'         => $this->set_bool_prop( $prop, $value ),
-			'bool_int'     => $this->set_bool_prop( $prop, $value ),
-            'enum'         => $this->set_enum_prop( $prop, $value, $subtype ?? null ),
-			'array_assoc'  => $this->set_assoc_arr_prop( $prop, $value ),
-			'array'        => $this->set_normal_arr_prop( $prop, $value ),
-			'binary'       => $this->set_binary_prop( $prop, $value ),
-			'json_obj'     => $this->set_json_prop( $prop, $value, false ),
-			'json'         => $this->set_json_prop( $prop, $value ),
-			'int'          => $this->set_int_prop( $prop, $value ),
-			'float'        => $this->set_float_prop( $prop, $value ),
-            'slug'         => $this->set_slug_prop( $prop, $value ),
-            'string'       => $this->set_wc_data_prop( $prop, $value ),
-			default        => $this->set_unknown_prop( $type, $prop, $value ),
+			'date_created'  => $this->set_date_prop( $prop, $value ),
+            'date_updated'  => $this->set_date_prop( $prop, $value ),
+            'date'          => $this->set_date_prop( $prop, $value ),
+			'bool'          => $this->set_bool_prop( $prop, $value ),
+			'bool_int'      => $this->set_bool_prop( $prop, $value ),
+            'enum'          => $this->set_enum_prop( $prop, $value, ...$sub ),
+            'term_single'   => $this->set_single_term_prop( $prop, $value, ...$sub ),
+            'term_array'    => $this->set_array_term_prop( $prop, $value, ...$sub ),
+			'array_assoc'   => $this->set_assoc_arr_prop( $prop, $value ),
+			'array'         => $this->set_normal_arr_prop( $prop, $value ),
+			'binary'        => $this->set_binary_prop( $prop, $value ),
+            'base64_string' => $this->set_base64_string_prop( $prop, $value ),
+			'json_obj'      => $this->set_json_prop( $prop, $value, false ),
+			'json'          => $this->set_json_prop( $prop, $value ),
+			'int'           => $this->set_int_prop( $prop, $value ),
+			'float'         => $this->set_float_prop( $prop, $value ),
+            'slug'          => $this->set_slug_prop( $prop, $value ),
+            'string'        => $this->set_wc_data_prop( $prop, $value ),
+			default         => $this->set_unknown_prop( $type, $prop, $value ),
 		};
 	}
 
@@ -193,6 +196,36 @@ trait Prop_Setters {
         }
     }
 
+    protected function set_single_term_prop( string $prop, mixed $value, string $field ) {
+        $value = (array) $value;
+        $value = \array_shift( $value );
+        $value = $this->map_term_field( $field, $value );
+
+        $this->set_wc_data_prop( $prop, $value );
+    }
+
+    protected function set_array_term_prop( string $prop, mixed $value, string $field ) {
+        $value = \array_map(
+            fn( $v ) => $this->map_term_field( $field, $v ),
+            (array) $value,
+        );
+
+        $this->set_wc_data_prop( $prop, $value );
+    }
+
+    private function map_term_field( string $field, mixed $value ) {
+        if ( $value instanceof \WP_Term ) {
+            return $value->$field;
+        }
+
+        return match ( $field ) {
+            'term_id' => \intval( $value ),
+            'parent'  => \intval( $value ),
+            'slug'    => \sanitize_title( $value ),
+            default   => $value,
+        };
+    }
+
     /**
      * Set an array prop
      *
@@ -221,6 +254,15 @@ trait Prop_Setters {
 
 		$this->set_wc_data_prop( $prop, $value );
 	}
+
+    protected function set_base64_string_prop( string $prop, mixed $value ) {
+        $value = match ( true ) {
+            null === $value                   => null,
+            '' === $value                     => null,
+            $this->is_base64_string( $value ) => \base64_decode( $value, true ),
+            default                           => $value,
+        };
+    }
 
     /**
      * Set a json prop

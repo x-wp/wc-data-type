@@ -54,6 +54,23 @@ abstract class XWC_Data extends WC_Data implements WC_Data_Definition {
     protected bool $core_read = false;
 
     /**
+     * Parses the method name.
+     *
+     * @param  string $name Method name.
+     * @param  array<mixed,mixed> $args Method arguments.
+     * @return array{0: string, 1: string, 2: string}}
+     */
+    final protected function parse_method_name( string $name, array $args ): array {
+        \preg_match( '/^([gs]et)_(.+)$/', $name, $m );
+
+        if ( 3 !== \count( $m ) || ( 'set' === ( $m[1] ?? '' ) && ! isset( $args[0] ) ) ) {
+            $this->error( 'bmc', \sprintf( 'BMC: %s, %s', static::class, $name ) );
+        }
+
+        return $m;
+    }
+
+    /**
      * Universal prop getter / setter
      *
      * @param  string $name Method name.
@@ -63,13 +80,7 @@ abstract class XWC_Data extends WC_Data implements WC_Data_Definition {
      * @throws \BadMethodCallException If prop does not exist.
      */
     public function __call( string $name, array $args ): mixed {
-        \preg_match( '/^([gs]et)_(.+)$/', $name, $m );
-
-        if ( 3 !== \count( $m ) || ( 'set' === ( $m[1] ?? '' ) && ! isset( $args[0] ) ) ) {
-            $this->error( 'bmc', \sprintf( 'BMC: %s, %s, %s', static::class, $name, \implode( ', ', $args ) ) );
-        }
-
-        [ $name, $type, $prop ] = $m;
+        [ $name, $type, $prop ] = $this->parse_method_name( $name, $args );
 
         return 'get' === $type
             ? $this->get_prop( $prop, $args[0] ?? 'view' )
@@ -110,7 +121,7 @@ abstract class XWC_Data extends WC_Data implements WC_Data_Definition {
      * @param  int|array|stdClass|static $data Package to init.
      */
     protected function load_data( int|array|stdClass|XWC_Data $data ) {
-        $this->data         = \array_merge( $this->core_data, $this->data, $this->extra_data );
+        $this->data         = \array_merge( $this->core_data, $this->data, $this->extra_data, $this->tax_data );
         $this->default_data = $this->data;
 
         match ( true ) {
@@ -166,7 +177,7 @@ abstract class XWC_Data extends WC_Data implements WC_Data_Definition {
 		 */
 	protected function check_unique_prop( string $prop, $value ) {
 		// Unique propas must be scalar and not empty.
-		if ( ! \is_scalar( $value ) || '' === $value ) {
+        if ( ! \in_array( $prop, $this->unique_data, true ) || ! \is_scalar( $value ) || '' === $value ) {
 			return;
 		}
 
@@ -179,6 +190,35 @@ abstract class XWC_Data extends WC_Data implements WC_Data_Definition {
             \sprintf( 'The value %s for %s is already in use.', $value, $prop ),
 		);
 	}
+
+    protected function check_required_prop( string $prop, mixed $value ) {
+        if ( ! isset( $this->required_data[ $prop ] ) ) {
+            return;
+        }
+
+        if ( null !== $value && $value !== $this->default_data[ $prop ] ) {
+            return;
+        }
+
+        $this->error(
+            'required_value_missing',
+            \sprintf( 'The value for %s is required.', $prop ),
+        );
+    }
+
+    /**
+     * Checks if validation method exists and calls it.
+     *
+     * @param  string $prop  Property name.
+     * @param  mixed  $value Property value.
+     */
+    protected function check_value_prop( string $prop, mixed $value ) {
+        if ( ! method_exists( $this, "validate_{$prop}" ) ) {
+            return;
+        }
+
+        $this->{"validate_{$prop}"}( $value );
+    }
 
     /**
      * {@inheritDoc}
