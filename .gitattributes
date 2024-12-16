@@ -1,7 +1,6 @@
 /.github            export-ignore
 /.yarn              export-ignore
 /docs               export-ignore
-/stubs              export-ignore
 /tests              export-ignore
 /.codeclimate.yml   export-ignore
 /.editorconfig      export-ignore
