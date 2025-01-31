@@ -265,7 +265,7 @@ class XWC_Object_Query {
 
         $escaped_like = $left_wildcard . $value . $right_wildcard;
 
-        return \sprintf( '%1$s LIKE \'%2$s\'', $column, $escaped_like );
+        return \sprintf( '%1$s LIKE \'%2$s\' ', $column, $escaped_like );
     }
 
     protected function get_array_clause_value( string $col, array $value ): string {

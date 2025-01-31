@@ -25,6 +25,9 @@ trait Query_Handler {
 
         $vars['fields']   = $vars['return'] ?? 'ids';
         $vars['per_page'] = $vars['limit'] ?? 20;
+        $vars['orderby']  = isset( $vars['orderby'] )
+            ? $this->cols_to_props[ $vars['orderby'] ] ?? $vars['orderby']
+            : $this->get_id_field();
 
         return \xwp_array_diff_assoc( $vars, 'return', 'limit' );
     }
