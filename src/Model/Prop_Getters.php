@@ -3,11 +3,13 @@
 namespace XWC\Data\Model;
 
 use XWC_Data;
+use XWC_Data_Store_XT;
 
 /**
  * Prop getters trait.
  *
- * @template T of XWC_Data
+ * @template TDt of XWC_Data
+ * @template TDs of XWC_Data_Store_XT
  */
 trait Prop_Getters {
     /**
@@ -44,7 +46,7 @@ trait Prop_Getters {
 
     protected function is_binary_string( ?string $value ): bool {
         //phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-		return ! (bool) @\mb_check_encoding( $value ?? '', 'UTF-8' );
+        return ! (bool) @\mb_check_encoding( $value ?? '', 'UTF-8' );
     }
 
     protected function is_base64_string( ?string $value ): bool {
@@ -143,23 +145,23 @@ trait Prop_Getters {
     }
 
     /**
-	 * Gets a prop for a getter method.
-	 *
-	 * Gets the value from either current pending changes, or the data itself.
-	 * Context controls what happens to the value before it's returned.
-	 *
-	 * @since  3.0.0
-	 * @param  string $prop Name of prop to get.
-	 * @param  string $context What the value is for. Valid values are view, edit and db.
-	 * @return mixed
-	 */
-	protected function get_prop( $prop, $context = 'view' ) {
+     * Gets a prop for a getter method.
+     *
+     * Gets the value from either current pending changes, or the data itself.
+     * Context controls what happens to the value before it's returned.
+     *
+     * @since  3.0.0
+     * @param  string $prop Name of prop to get.
+     * @param  string $context What the value is for. Valid values are view, edit and db.
+     * @return mixed
+     */
+    protected function get_prop( $prop, $context = 'view' ) {
         if ( 'db' !== $context ) {
             return $this->get_wc_data_prop( $prop, $context );
         }
 
         $value          = $this->get_wc_data_prop( $prop, 'edit' );
-		[ $type, $sub ] = $this->get_prop_type( $prop );
+        [ $type, $sub ] = $this->get_prop_type( $prop );
 
         return match ( $type ) {
             'string'        => $value,
@@ -179,7 +181,7 @@ trait Prop_Getters {
             'base64_string' => $this->get_base64_string_prop( $value ),
             default         => $this->get_unknown_prop( $type, $prop, $value ),
         };
-	}
+    }
 
     protected function get_wc_data_prop( string $prop, string $context = 'view' ): mixed {
         return parent::get_prop( $prop, $context );
@@ -255,15 +257,15 @@ trait Prop_Getters {
         }
 
         /**
-		 * Filters the default value for an unknown prop type.
-		 *
-		 * @param mixed  $value The default value.
-		 * @param string $prop  The prop name.
-		 *
-		 * @return mixed
-		 *
-		 * @since 0.2
-		 */
-		return \apply_filters( "xwc_data_get_{$type}_prop", $value, $prop );
+         * Filters the default value for an unknown prop type.
+         *
+         * @param mixed  $value The default value.
+         * @param string $prop  The prop name.
+         *
+         * @return mixed
+         *
+         * @since 0.2
+         */
+        return \apply_filters( "xwc_data_get_{$type}_prop", $value, $prop );
     }
 }

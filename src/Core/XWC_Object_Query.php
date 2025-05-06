@@ -55,8 +55,8 @@ class XWC_Object_Query {
         protected string $id_field,
         ...$query,
     ) {
-		$this->parse( $query );
-		$this->reset();
+        $this->parse( $query );
+        $this->reset();
         $this->get_objects();
     }
 
@@ -167,7 +167,7 @@ class XWC_Object_Query {
                 'all',
                 \wc_string_to_array( $v ),
                 true,
-            )
+            ),
         );
 
         if ( \count( $cols ) ) {

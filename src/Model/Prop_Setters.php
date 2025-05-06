@@ -3,17 +3,24 @@
 namespace XWC\Data\Model;
 
 use XWC_Data;
+use XWC_Data_Store_XT;
+use XWC_Meta_Store;
 
 /**
  * Prop setters trait.
+ *
+ * @template TDt of XWC_Data
+ * @template TDs of XWC_Data_Store_XT
+ *
+ * @method WC_Data_Store<TDs<TDt,XWC_Meta_Store>> get_data_store() Get the data store object.
  */
 trait Prop_Setters {
     /**
-	 * All data for this object. Name value pairs (name + default value).
-	 *
-	 * @var array
-	 */
-	protected $data = array();
+     * All data for this object. Name value pairs (name + default value).
+     *
+     * @var array
+     */
+    protected $data = array();
 
     abstract protected function get_prop_type( string $prop ): array;
 
@@ -22,16 +29,16 @@ trait Prop_Setters {
     abstract protected function is_base64_string( string $value ): bool;
 
     /**
-	 * Set a collection of props in one go, collect any errors, and return the result.
-	 * Only sets using public methods.
-	 *
-	 * @since  3.0.0
-	 *
-	 * @param array  $props Key value pairs to set. Key is the prop and should map to a setter function name.
-	 * @param string $context In what context to run this.
-	 *
-	 * @return bool|static|\WP_Error
-	 */
+     * Set a collection of props in one go, collect any errors, and return the result.
+     * Only sets using public methods.
+     *
+     * @since  3.0.0
+     *
+     * @param array  $props Key value pairs to set. Key is the prop and should map to a setter function name.
+     * @param string $context In what context to run this.
+     *
+     * @return bool|static|\WP_Error
+     */
     public function set_props( $props, $context = 'set' ) {
         $prop_res = parent::set_props( $props, $context );
 
@@ -62,16 +69,16 @@ trait Prop_Setters {
     }
 
     /**
-	 * Sets a prop for a setter method.
-	 *
-	 * This stores changes in a special array so we can track what needs saving
-	 * the DB later.
-	 *
-	 * @since 3.0.0
-	 * @param string $prop Name of prop to set.
-	 * @param mixed  $value Value of the prop.
-	 */
-	protected function set_prop( $prop, $value ) {
+     * Sets a prop for a setter method.
+     *
+     * This stores changes in a special array so we can track what needs saving
+     * the DB later.
+     *
+     * @since 3.0.0
+     * @param string $prop Name of prop to set.
+     * @param mixed  $value Value of the prop.
+     */
+    protected function set_prop( $prop, $value ) {
         if ( 'id' === \strtolower( $prop ) ) {
             return;
         }
@@ -82,30 +89,30 @@ trait Prop_Setters {
             $this->check_value_prop( $prop, $value );
         }
 
-		[ $type, $sub ] = $this->get_prop_type( $prop );
+        [ $type, $sub ] = $this->get_prop_type( $prop );
 
-		match ( $type ) {
-			'date_created'  => $this->set_date_prop( $prop, $value ),
+        match ( $type ) {
+            'date_created'  => $this->set_date_prop( $prop, $value ),
             'date_updated'  => $this->set_date_prop( $prop, $value ),
             'date'          => $this->set_date_prop( $prop, $value ),
-			'bool'          => $this->set_bool_prop( $prop, $value ),
-			'bool_int'      => $this->set_bool_prop( $prop, $value ),
+            'bool'          => $this->set_bool_prop( $prop, $value ),
+            'bool_int'      => $this->set_bool_prop( $prop, $value ),
             'enum'          => $this->set_enum_prop( $prop, $value, ...$sub ),
             'term_single'   => $this->set_single_term_prop( $prop, $value, ...$sub ),
             'term_array'    => $this->set_array_term_prop( $prop, $value, ...$sub ),
-			'array_assoc'   => $this->set_assoc_arr_prop( $prop, $value ),
-			'array'         => $this->set_normal_arr_prop( $prop, $value ),
-			'binary'        => $this->set_binary_prop( $prop, $value ),
+            'array_assoc'   => $this->set_assoc_arr_prop( $prop, $value ),
+            'array'         => $this->set_normal_arr_prop( $prop, $value ),
+            'binary'        => $this->set_binary_prop( $prop, $value ),
             'base64_string' => $this->set_base64_string_prop( $prop, $value ),
-			'json_obj'      => $this->set_json_prop( $prop, $value, false ),
-			'json'          => $this->set_json_prop( $prop, $value ),
-			'int'           => $this->set_int_prop( $prop, $value ),
-			'float'         => $this->set_float_prop( $prop, $value ),
+            'json_obj'      => $this->set_json_prop( $prop, $value, false ),
+            'json'          => $this->set_json_prop( $prop, $value ),
+            'int'           => $this->set_int_prop( $prop, $value ),
+            'float'         => $this->set_float_prop( $prop, $value ),
             'slug'          => $this->set_slug_prop( $prop, $value ),
             'string'        => $this->set_wc_data_prop( $prop, $value ),
-			default         => $this->set_unknown_prop( $type, $prop, $value ),
-		};
-	}
+            default         => $this->set_unknown_prop( $type, $prop, $value ),
+        };
+    }
 
     /**
      * Direct access to the `WC_Data::set_prop` method.
@@ -138,8 +145,8 @@ trait Prop_Setters {
      * @param  string $prop  Property name.
      * @param  mixed  $value Property value.
      */
-	protected function set_date_prop( $prop, $value ) {
-		static $loop;
+    protected function set_date_prop( $prop, $value ) {
+        static $loop;
 
         if ( ! $loop ) {
             $loop = true;
@@ -149,7 +156,7 @@ trait Prop_Setters {
         $loop = false;
 
         $this->set_wc_data_prop( $prop, $value );
-	}
+    }
 
     /**
      * Set a boolean prop
@@ -157,13 +164,13 @@ trait Prop_Setters {
      * @param  string $prop  Property name.
      * @param  mixed  $value Property value.
      */
-	protected function set_bool_prop( string $prop, $value ) {
-		if ( '' === $value ) {
-			return;
-		}
+    protected function set_bool_prop( string $prop, $value ) {
+        if ( '' === $value ) {
+            return;
+        }
 
-		$this->set_wc_data_prop( $prop, \wc_string_to_bool( $value ) );
-	}
+        $this->set_wc_data_prop( $prop, \wc_string_to_bool( $value ) );
+    }
 
     /**
      * Sets an enum prop
@@ -232,9 +239,9 @@ trait Prop_Setters {
      * @param  string $prop  Property name.
      * @param  mixed  $value Property value.
      */
-	protected function set_normal_arr_prop( string $prop, $value ) {
-		$this->set_wc_data_prop( $prop, \wc_string_to_array( $value ) );
-	}
+    protected function set_normal_arr_prop( string $prop, $value ) {
+        $this->set_wc_data_prop( $prop, \wc_string_to_array( $value ) );
+    }
 
     protected function set_assoc_arr_prop( string $prop, $value ) {
         $value = \maybe_unserialize( $value );
@@ -247,13 +254,13 @@ trait Prop_Setters {
      * @param  string $prop  Property name.
      * @param  mixed  $value Property value.
      */
-	protected function set_binary_prop( string $prop, $value ) {
-		$value = $this->is_binary_string( $value )
+    protected function set_binary_prop( string $prop, $value ) {
+        $value = $this->is_binary_string( $value )
             ? \bin2hex( $value )
             : $value;
 
-		$this->set_wc_data_prop( $prop, $value );
-	}
+        $this->set_wc_data_prop( $prop, $value );
+    }
 
     protected function set_base64_string_prop( string $prop, mixed $value ) {
         $value = match ( true ) {
@@ -271,12 +278,12 @@ trait Prop_Setters {
      * @param  string|array $value Property value.
      * @param  bool         $assoc Whether to return an associative array or not.
      */
-	protected function set_json_prop( string $prop, string|array $value, bool $assoc = true ) {
+    protected function set_json_prop( string $prop, string|array $value, bool $assoc = true ) {
         if ( ! \is_array( $value ) ) {
             $value = \json_decode( $value, $assoc );
         }
-		$this->set_wc_data_prop( $prop, $value );
-	}
+        $this->set_wc_data_prop( $prop, $value );
+    }
 
     /**
      * Set an int prop
@@ -284,9 +291,9 @@ trait Prop_Setters {
      * @param  string $prop  Property name.
      * @param  mixed  $value Property value.
      */
-	protected function set_int_prop( string $prop, $value ) {
-		$this->set_wc_data_prop( $prop, \intval( $value ) );
-	}
+    protected function set_int_prop( string $prop, $value ) {
+        $this->set_wc_data_prop( $prop, \intval( $value ) );
+    }
 
     /**
      * Set a float prop
@@ -294,9 +301,9 @@ trait Prop_Setters {
      * @param  string $prop  Property name.
      * @param  mixed  $value Property value.
      */
-	protected function set_float_prop( string $prop, $value ) {
-		$this->set_wc_data_prop( $prop, \floatval( $value ) );
-	}
+    protected function set_float_prop( string $prop, $value ) {
+        $this->set_wc_data_prop( $prop, \floatval( $value ) );
+    }
 
     protected function set_slug_prop( string $prop, $value ) {
         if ( ! $this->get_object_read() || '' === $value ) {
@@ -304,7 +311,7 @@ trait Prop_Setters {
         }
 
         $value = \sanitize_title( $value );
-        $value = $this->data_store->unique_entity_slug( $value, $prop, $this->get_id() );
+        $value = $this->get_data_store()->unique_entity_slug( $value, $prop, $this->get_id() );
 
         $this->set_wc_data_prop( $prop, $value );
     }

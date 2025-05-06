@@ -53,7 +53,7 @@ use XWC_Object_Factory;
  */
 class Entity {
     private const FIELDS = array(
-		'name',
+        'name',
         'model',
         'table',
         'data_store',
@@ -74,7 +74,7 @@ class Entity {
         'tax_to_props',
         'tax_fields',
         'has_meta',
-	);
+    );
 
     /**
      * Object factories.

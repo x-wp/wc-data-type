@@ -28,18 +28,25 @@ use XWC\Data\Model\Prop_Setters;
  *  - `array_raw` - an array which will always be saved as a comma separated string
  *  - `binary`    - A hex string which will be converted to binary when saved to the database
  *
- * @method XWC_Data_Store_XT<static> get_data_store() Get the data store object.
+ * @method WC_Data_Store<TDs> get_data_store() Get the data store object.
  *
  * @template TDs of XWC_Data_Store_XT
+ *
+ * @implements WC_Data_Definition<TDs>
  */
 abstract class XWC_Data extends WC_Data implements WC_Data_Definition {
     /**
      * Prop getters trait.
      *
-     * @use Prop_Getters<static>
+     * @use Prop_Getters<static,TDs>
      */
     use Prop_Getters;
 
+    /**
+     * Prop setters trait.
+     *
+     * @use Prop_Setters<static,TDs>
+     */
     use Prop_Setters;
 
     /**
@@ -85,13 +92,13 @@ abstract class XWC_Data extends WC_Data implements WC_Data_Definition {
         return 'get' === $type
             ? $this->get_prop( $prop, $args[0] ?? 'view' )
             : $this->set_prop( $prop, $args[0] );
-	}
+    }
 
     /**
-	 * Default constructor.
-	 *
+     * Default constructor.
+     *
      * @param int|array|stdClass|static $data ID to load from the DB (optional) or already queried data.
-	 */
+     */
     public function __construct( int|array|stdClass|XWC_Data $data = 0 ) {
         $this->load_data_store();
         $this->load_object_args();
@@ -142,23 +149,23 @@ abstract class XWC_Data extends WC_Data implements WC_Data_Definition {
         }
 
         $this->set_id( $id );
-        $this->data_store->read( $this );
+        $this->get_data_store()->read( $this );
     }
 
     protected function load_row( array $data ) {
-        $id = $data[ $this->data_store->get_id_field() ] ?? 0;
+        $id = $data[ $this->get_data_store()->get_id_field() ] ?? 0;
 
         if ( ! $id ) {
             return $this->set_object_read( true );
         }
 
-        unset( $data[ $this->data_store->get_id_field() ] );
+        unset( $data[ $this->get_data_store()->get_id_field() ] );
 
         $this->set_id( $id );
         $this->set_defaults();
         $this->set_props( $data );
         $this->set_core_data_read( true );
-        $this->data_store->read( $this );
+        $this->get_data_store()->read( $this );
     }
 
     public function set_core_data_read( bool $read = true ) {
@@ -169,27 +176,27 @@ abstract class XWC_Data extends WC_Data implements WC_Data_Definition {
         return (bool) $this->core_read;
     }
 
-	/**
-		 * Checks if a prop value is unique.
-		 *
-		 * @param  string $prop  Property name.
-		 * @param  mixed  $value Property value.
-		 */
-	protected function check_unique_prop( string $prop, $value ) {
-		// Unique propas must be scalar and not empty.
+    /**
+         * Checks if a prop value is unique.
+         *
+         * @param  string $prop  Property name.
+         * @param  mixed  $value Property value.
+         */
+    protected function check_unique_prop( string $prop, $value ) {
+        // Unique propas must be scalar and not empty.
         if ( ! \in_array( $prop, $this->unique_data, true ) || ! \is_scalar( $value ) || '' === $value ) {
-			return;
-		}
+            return;
+        }
 
-		if ( $this->data_store->is_value_unique( $value, $prop, $this->get_id() ) ) {
-			return;
-		}
+        if ( $this->get_data_store()->is_value_unique( $value, $prop, $this->get_id() ) ) {
+            return;
+        }
 
-		$this->error(
+        $this->error(
             'unique_value_exists',
             \sprintf( 'The value %s for %s is already in use.', $value, $prop ),
-		);
-	}
+        );
+    }
 
     protected function check_required_prop( string $prop, mixed $value ) {
         if ( ! isset( $this->required_data[ $prop ] ) ) {
