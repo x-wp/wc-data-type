@@ -9,8 +9,6 @@
  * @package WooCommerce
  */
 
-defined( 'ABSPATH' ) || exit;
-
 /**
  * Meta data class.
  */

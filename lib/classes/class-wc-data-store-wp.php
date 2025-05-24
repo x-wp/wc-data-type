@@ -9,8 +9,6 @@
  * @package WooCommerce\Classes
  */
 
-defined( 'ABSPATH' ) || exit;
-
 /**
  * WC_Data_Store_WP class.
  */
@@ -85,12 +83,12 @@ class WC_Data_Store_WP {
         $db_info       = $this->get_db_info();
         $raw_meta_data = $wpdb->get_results(
             $wpdb->prepare(
-                
+
                 "SELECT {$db_info['meta_id_field']} as meta_id, meta_key, meta_value
                 FROM {$db_info['table']}
                 WHERE {$db_info['object_id_field']} = %d
                 ORDER BY {$db_info['meta_id_field']}",
-                
+
                 $object->get_id()
             )
         );
@@ -277,7 +275,7 @@ class WC_Data_Store_WP {
         $skipped_values = array( '', array(), null );
         $wp_query_args  = array(
             'errors'     => array(),
-            'meta_query' => array(), 
+            'meta_query' => array(),
         );
 
         foreach ( $query_vars as $key => $value ) {
@@ -435,7 +433,7 @@ class WC_Data_Store_WP {
 
         // Build meta query for unrecognized keys.
         if ( ! isset( $wp_query_args['meta_query'] ) ) {
-            $wp_query_args['meta_query'] = array(); 
+            $wp_query_args['meta_query'] = array();
         }
 
         // Meta dates are stored as timestamps in the db.

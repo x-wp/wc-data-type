@@ -9,9 +9,6 @@
 
 /**
  * Data store class.
- *
- * @template TDS of WC_Data_Store_WP
- * @mixin TDS
  */
 class WC_Data_Store {
 

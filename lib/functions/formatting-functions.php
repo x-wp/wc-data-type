@@ -21,7 +21,7 @@ if ( ! function_exists( 'wc_bool_to_string' ) ) :
  *
  * @since 3.0.0
  * @param bool|string $bool Bool to convert. If a string is passed it will first be converted to a bool.
- * @return string
+ * @return 'yes'|'no'
  */
 function wc_bool_to_string( $bool ) {
 	if ( ! is_bool( $bool ) ) {

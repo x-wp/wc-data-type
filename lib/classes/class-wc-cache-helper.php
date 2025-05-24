@@ -7,8 +7,6 @@
 
 use Automattic\WooCommerce\Caching\CacheNameSpaceTrait;
 
-defined( 'ABSPATH' ) || exit;
-
 /**
  * WC_Cache_Helper.
  */
@@ -185,5 +183,3 @@ class WC_Cache_Helper {
         wp_schedule_single_event( time() + 30, 'delete_version_transients', array( $version ) );
     }
 }
-
-WC_Cache_Helper::init();

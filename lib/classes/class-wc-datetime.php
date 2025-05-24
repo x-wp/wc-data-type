@@ -7,8 +7,6 @@
  * @package WooCommerce\Classes
  */
 
-defined( 'ABSPATH' ) || exit;
-
 /**
  * Datetime class.
  */

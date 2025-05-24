@@ -82,7 +82,7 @@ abstract class WC_Data {
 	 * Contains a reference to the data store for this class.
 	 *
 	 * @since 3.0.0
-	 * @var object
+	 * @var WC_Data_Store
 	 */
 	protected $data_store;
 

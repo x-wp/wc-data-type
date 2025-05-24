@@ -30,7 +30,7 @@ class XWC_Polyfill_Autoloader {
         'WC_Data_Store_WP'               => 'classes/class-wc-data-store-wp.php',
         'WC_DateTime'                    => 'classes/class-wc-datetime.php',
         'WC_Meta_Data'                   => 'classes/class-wc-meta-data.php',
-        'WC_Object_Data_Store_Interface' => 'intefaces/wc-object-data-store-interface.php',
+        'WC_Object_Data_Store_Interface' => 'interfaces/wc-object-data-store-interface.php',
     );
 
     /**
