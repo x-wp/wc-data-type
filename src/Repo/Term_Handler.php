@@ -2,6 +2,7 @@
 
 namespace XWC\Data\Repo;
 
+use WP_Term;
 use XWC_Data;
 
 /**
@@ -11,22 +12,32 @@ use XWC_Data;
  */
 trait Term_Handler {
     /**
-     * Term props
+     * Taxonomy to property mapping.
      *
-     * @var array
+     * @var array<string,string>
      */
-    protected $term_props = array();
-
     protected array $tax_to_props = array();
 
-
+    /**
+     * Properties that must exist for terms.
+     *
+     * @var array<string>
+     */
     protected array $must_exist_term_props = array();
 
+    /**
+     * Default term IDs for properties that must exist.
+     *
+     * @var array<string,array<int>>
+     */
     protected array $default_term_ids = array();
 
-    public array $term_query_vars = array();
-
-    protected function read_term_data( \XWC_Data &$data ) {
+    /**
+     * Read term data.
+     *
+     * @param T $data Data object.
+     */
+    protected function read_term_data( \XWC_Data &$data ): void {
         foreach ( $this->get_tax_to_props() as $tax => $prop ) {
             $data->{"set_$prop"}( $this->get_terms( $data, $tax ) );
         }
@@ -35,9 +46,10 @@ trait Term_Handler {
     /**
      * Update term data.
      *
-     * @param  T $data
+     * @param  T    $data Data object.
+     * @param  bool $force Force update even if no changes.
      */
-    protected function update_term_data( \XWC_Data &$data, bool $force = false ) {
+    protected function update_term_data( \XWC_Data &$data, bool $force = false ): void {
         $changes = $data->get_changes();
 
         foreach ( $this->get_tax_to_props() as $tax => $prop ) {
@@ -56,7 +68,7 @@ trait Term_Handler {
      *
      * @param  T $data Data object.
      * @param  string $taxonomy Taxonomy.
-     * @return array
+     * @return array<WP_Term>
      */
     protected function get_terms( \XWC_Data $data, string $taxonomy ) {
         $terms = \wp_get_object_terms( $data->get_id(), $taxonomy );
@@ -64,6 +76,13 @@ trait Term_Handler {
         return ! \is_wp_error( $terms ) ? $terms : array();
     }
 
+    /**
+     * Get the prop data for a set of terms.
+     *
+     * @param  array<int|string> $terms Array of term IDs.
+     * @param  string $prop Property name.
+     * @return array<int>
+     */
     protected function get_term_prop_data( array $terms, string $prop ): array {
         $terms = \wp_parse_id_list( $terms );
         $terms = \array_filter( $terms );
@@ -80,7 +99,7 @@ trait Term_Handler {
      *
      * @param  \XWC_Data $data Data object.
      */
-    protected function delete_term_data( \XWC_Data $data ) {
+    protected function delete_term_data( \XWC_Data $data ): void {
         $taxonomies = \array_keys( $this->get_tax_to_props() );
 
         if ( ! $taxonomies ) {

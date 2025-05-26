@@ -23,9 +23,16 @@ class XWC_Object_Factory {
     /**
      * Array of entity names with their class names.
      *
-     * @var array<string, class-string<T>>
+     * @var array<string, class-string<XWC_Data>>
      */
     protected array $models = array();
+
+    /**
+     * Constructor
+     */
+    protected function __construct() {
+        $this->init();
+    }
 
     /**
      * Handles dynamic method calls for getting object data.
@@ -38,7 +45,7 @@ class XWC_Object_Factory {
     public function __call( string $name, $args ) {
         \preg_match( '/^get_(.*?)(?:_id|_classname)?$/', $name, $matches );
 
-        $type   = $matches[1];
+        $type   = $matches[1] ?? '';
         $method = \str_replace( $type, 'object', $name );
 
         if ( ! \method_exists( $this, $method ) ) {
@@ -63,32 +70,6 @@ class XWC_Object_Factory {
     }
 
     /**
-     * Constructor
-     */
-    protected function __construct() {
-        $this->init();
-    }
-
-    /**
-     *
-     * Initialize the data types.
-     *
-     * @global Entity_Manager $xwc_entities
-     */
-    protected function init() {
-        /**
-         * Global entity manager.
-         *
-         * @var Entity_Manager $xwc_entities
-         */
-        global $xwc_entities;
-
-        foreach ( $xwc_entities->get_entity() as $type => $dto ) {
-            $this->models[ $type ] = $dto->model;
-        }
-    }
-
-    /**
      * Get a data object
      *
      * @param  mixed  $id   Object ID.
@@ -102,6 +83,11 @@ class XWC_Object_Factory {
             return false;
         }
 
+        /**
+         * Filters the class name of a data object.
+         *
+         * @var class-string<T> $classname
+         */
         $classname = $this->{"get_{$type}_classname"}( $id );
 
         try {
@@ -112,13 +98,32 @@ class XWC_Object_Factory {
     }
 
     /**
+     *
+     * Initialize the data types.
+     *
+     * @global Entity_Manager $xwc_entities
+     */
+    protected function init(): void {
+        /**
+         * Global entity manager.
+         *
+         * @var Entity_Manager $xwc_entities
+         */
+        global $xwc_entities;
+
+        foreach ( $xwc_entities->get_entity() as $type => $dto ) {
+            $this->models[ $type ] = $dto->model;
+        }
+    }
+
+    /**
      * Get the object ID.
      *
      * @param  mixed  $id   Object ID.
      * @param  string $type Object type.
      * @return int|false
      */
-    protected function get_object_id( mixed $id, string $type ): int|false {
+    protected function get_object_id( mixed $id, string $type ): int|bool {
         $obj = $GLOBALS[ $type ] ?? null;
 
         return match ( true ) {
@@ -136,7 +141,12 @@ class XWC_Object_Factory {
      * @param  string $type Object type.
      * @return class-string<T>|false
      */
-    protected function get_object_classname( int $id, string $type ): string|false {
+    protected function get_object_classname( int $id, string $type ): string|bool {
+        /**
+         * Filters the class name of a data object.
+         *
+         * @var class-string<T>|false $classname
+         */
         // Documented in WooCommerce.
         $classname = \apply_filters( "xwc_{$type}_class", $this->models[ $type ] ?? false, $id );
 

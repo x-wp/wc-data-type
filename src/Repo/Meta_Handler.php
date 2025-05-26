@@ -2,6 +2,7 @@
 
 namespace XWC\Data\Repo;
 
+use stdClass;
 use XWC_Data;
 use XWC_Meta_Store;
 
@@ -21,7 +22,83 @@ trait Meta_Handler {
     /**
      * Read props stored in meta keys.
      *
+     * @param  T        $data Data object.
+     * @param  stdClass $meta Meta object (containing at least ->id).
+     * @return int|false
+     */
+    public function add_meta( &$data, $meta ) {
+        if ( ! $this->get_meta_store() ) {
+            return false;
+        }
+
+        return $this->get_meta_store()->add_meta( $data, $meta );
+    }
+
+    /**
+     * Update meta.
+     *
+     * @param  T        $data Data object.
+     * @param  \stdClass $meta
+     * @return bool
+     */
+    public function update_meta( &$data, $meta ) {
+        if ( ! $this->get_meta_store() ) {
+            return false;
+        }
+
+        return $this->get_meta_store()->update_meta( $data, $meta );
+    }
+
+    /**
+     * Read meta.
+     *
      * @param  T $data Data object.
+     * @return array<object>
+     */
+    public function read_meta( &$data ) {
+        if ( ! $this->get_meta_store() ) {
+            return array();
+        }
+
+        $raw_meta = $this->get_meta_store()->read_meta( $data );
+
+        return $this->filter_raw_meta_data( $data, $raw_meta );
+    }
+
+    /**
+     * Delete meta.
+     *
+     * @param  T         $data Data object.
+     * @param  stdClass $meta Meta object (containing at least ->id).
+     * @return array<bool>
+     */
+    public function delete_meta( &$data, $meta ) {
+        if ( ! $this->get_meta_store() ) {
+            return array();
+        }
+
+        return array( $this->get_meta_store()->delete_meta( $data, $meta ) );
+    }
+
+    /**
+     * Delete all meta for a data object.
+     *
+     * @param  T $data Data object.
+     * @return void
+     */
+    public function delete_all_meta( &$data ) {
+        if ( ! $this->get_meta_store() ) {
+            return;
+        }
+
+        $this->get_meta_store()->delete_all_meta( $data );
+    }
+
+    /**
+     * Read props stored in meta keys.
+     *
+     * @param  T $data Data object.
+     * @return void
      */
     protected function read_prop_data( &$data ) {
         if ( ! $this->get_meta_store() ) {
@@ -33,6 +110,12 @@ trait Meta_Handler {
         $data->set_props( $props );
     }
 
+    /**
+     * Update props stored in meta keys.
+     *
+     * @param T $data Data object.
+     * @return void
+     */
     protected function update_prop_data( &$data ) {
         if ( ! $this->get_meta_store() ) {
             return;
@@ -44,7 +127,8 @@ trait Meta_Handler {
     /**
      * Update meta data
      *
-    * @param T $data Data Object.
+     * @param T $data Data Object.
+     * @return void
      */
     protected function update_meta_data( &$data ) {
         if ( ! $this->get_meta_store() ) {
@@ -58,6 +142,7 @@ trait Meta_Handler {
      * Read props stored in meta keys.
      *
      * @param  T $data Data object.
+     * @return void
      */
     protected function read_extra_data( &$data ) {
         if ( ! $this->get_meta_store() ) {
@@ -72,6 +157,13 @@ trait Meta_Handler {
         }
     }
 
+    /**
+     * Read a single extra prop from meta.
+     *
+     * @param  T    $data Data object.
+     * @param  string $key  Key to read.
+     * @return void
+     */
     protected function read_extra_prop( &$data, string $key ) {
         $mid  = $this->get_meta_store()->get_meta_id_by_key( $data, '_' . $key );
         $meta = $this->get_meta_store()->get_metadata_by_id( $mid );
@@ -83,6 +175,12 @@ trait Meta_Handler {
         $data->{"set_$key"}( $meta->meta_value );
     }
 
+    /**
+     * Update extra data.
+     *
+     * @param  T $data Data object.
+     * @return void
+     */
     protected function update_extra_data( &$data ) {
         if ( ! $this->get_meta_store() ) {
             return;
@@ -99,72 +197,5 @@ trait Meta_Handler {
         } catch ( \Throwable ) {
             return;
         }
-    }
-
-    /**
-     * Read props stored in meta keys.
-     *
-     * @param  T      $data Data object.
-     * @param  object $meta
-     * @return int|false
-     */
-    public function add_meta( &$data, $meta ) {
-        if ( ! $this->get_meta_store() ) {
-            return false;
-        }
-
-        return $this->get_meta_store()->add_meta( $data, $meta );
-    }
-
-    /**
-     * Update meta.
-     *
-     * @param  T        $data Data object.
-     * @param \stdClass $meta
-     */
-    public function update_meta( &$data, $meta ) {
-        if ( ! $this->get_meta_store() ) {
-            return;
-        }
-
-        return $this->get_meta_store()->update_meta( $data, $meta );
-    }
-
-    /**
-     * Read meta.
-     *
-     * @param  T        $data Data object.
-     */
-    public function read_meta( &$data ) {
-        if ( ! $this->get_meta_store() ) {
-            return array();
-        }
-
-        $raw_meta = $this->get_meta_store()->read_meta( $data );
-
-        return $this->filter_raw_meta_data( $data, $raw_meta );
-    }
-
-    /**
-     * Delete meta.
-     *
-     * @param  T     $data Data object.
-     * @param  object $meta Meta object (containing at least ->id).
-     * @return array
-     */
-    public function delete_meta( &$data, $meta ) {
-        if ( ! $this->get_meta_store() ) {
-            return array();
-        }
-
-        return array( $this->get_meta_store()->delete_meta( $data, $meta ) );
-    }
-
-    public function delete_all_meta( &$data ) {
-        if ( ! $this->get_meta_store() ) {
-            return;
-        }
-
-        return $this->get_meta_store()->delete_all_meta( $data );
     }
 }

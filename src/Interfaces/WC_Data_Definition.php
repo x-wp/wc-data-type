@@ -9,10 +9,30 @@
  * Abstract WC Data Class
  *
  * Implemented by classes using the same CRUD(s) pattern.
- *
- * @template TDs of WC_Data_Store_WP
  */
 interface WC_Data_Definition {
+    /**
+     * Generate cache key from id and group.
+     *
+     * @since 4.7.0
+     *
+     * @param int|string $id          Object ID.
+     * @param string     $cache_group Group name use to store cache. Whole group cache can be invalidated in one go.
+     *
+     * @return string Meta cache key.
+     */
+    public static function generate_meta_cache_key( $id, $cache_group );
+
+    /**
+     * Prime caches for raw meta data. This includes meta_id column as well, which is not included by default in WP meta data.
+     *
+     * @since 4.7.0
+     *
+     * @param array  $raw_meta_data_collection Array of objects of { object_id => array( meta_row_1, meta_row_2, ... }.
+     * @param string $cache_group              Name of cache group.
+     */
+    public static function prime_raw_meta_data_cache( $raw_meta_data_collection, $cache_group );
+
     /**
      * Only store the object ID to avoid serializing the data object instance.
      *
@@ -35,10 +55,18 @@ interface WC_Data_Definition {
     public function __clone();
 
     /**
+     * Change data to JSON format.
+     *
+     * @since  2.6.0
+     * @return string Data in JSON format.
+     */
+    public function __toString();
+
+    /**
      * Get the data store.
      *
      * @since  3.0.0
-     * @return WC_Data_Store<TDs>
+     * @return WC_Data_Store
      */
     public function get_data_store();
 
@@ -66,14 +94,6 @@ interface WC_Data_Definition {
      * @return int
      */
     public function save();
-
-    /**
-     * Change data to JSON format.
-     *
-     * @since  2.6.0
-     * @return string Data in JSON format.
-     */
-    public function __toString();
 
     /**
      * Returns all data for this object.
@@ -181,28 +201,6 @@ interface WC_Data_Definition {
      * @return string
      */
     public function get_meta_cache_key();
-
-    /**
-     * Generate cache key from id and group.
-     *
-     * @since 4.7.0
-     *
-     * @param int|string $id          Object ID.
-     * @param string     $cache_group Group name use to store cache. Whole group cache can be invalidated in one go.
-     *
-     * @return string Meta cache key.
-     */
-    public static function generate_meta_cache_key( $id, $cache_group );
-
-    /**
-     * Prime caches for raw meta data. This includes meta_id column as well, which is not included by default in WP meta data.
-     *
-     * @since 4.7.0
-     *
-     * @param array  $raw_meta_data_collection Array of objects of { object_id => array( meta_row_1, meta_row_2, ... }.
-     * @param string $cache_group              Name of cache group.
-     */
-    public static function prime_raw_meta_data_cache( $raw_meta_data_collection, $cache_group );
 
     /**
      * Read Meta Data from the database. Ignore any internal properties.

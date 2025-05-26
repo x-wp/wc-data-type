@@ -2,6 +2,7 @@
 
 namespace XWC\Data\Model;
 
+use BackedEnum;
 use XWC_Data;
 use XWC_Data_Store_XT;
 use XWC_Meta_Store;
@@ -10,18 +11,21 @@ use XWC_Meta_Store;
  * Prop setters trait.
  *
  * @template TDt of XWC_Data
- * @template TDs of XWC_Data_Store_XT
  *
- * @method WC_Data_Store<TDs<TDt,XWC_Meta_Store>> get_data_store() Get the data store object.
+ * @method XWC_Data_Store_XT<TDt,XWC_Meta_Store<TDt>> get_data_store() Get the data store.
+ *
+ * @phpstan-require-extends XWC_Data
  */
 trait Prop_Setters {
     /**
-     * All data for this object. Name value pairs (name + default value).
+     * Get the type of a prop.
      *
-     * @var array
+     * @param  string $prop Name of prop to get type for.
+     * @return array{
+     *   0: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other',
+     *   1: array<int,mixed>
+     * } | array{0: 'enum', 1: array{0: class-string<BackedEnum>}}
      */
-    protected $data = array();
-
     abstract protected function get_prop_type( string $prop ): array;
 
     abstract protected function is_binary_string( string $value ): bool;
@@ -34,19 +38,15 @@ trait Prop_Setters {
      *
      * @since  3.0.0
      *
-     * @param array  $props Key value pairs to set. Key is the prop and should map to a setter function name.
+     * @param array<string,mixed>  $props Key value pairs to set. Key is the prop and should map to a setter function name.
      * @param string $context In what context to run this.
      *
-     * @return bool|static|\WP_Error
+     * @return true|static|\WP_Error
      */
     public function set_props( $props, $context = 'set' ) {
         $prop_res = parent::set_props( $props, $context );
 
-        if ( 'save' !== $context ) {
-            return $prop_res;
-        }
-
-        if ( \is_wp_error( $prop_res ) ) {
+        if ( 'save' !== $context || \is_wp_error( $prop_res ) ) {
             return $prop_res;
         }
 
@@ -58,12 +58,12 @@ trait Prop_Setters {
             $save_res = new \WP_Error( 'save_error', $e->getMessage() );
         } finally {
             return match ( true ) {
-                0 === $save_res          => new \WP_Error(
+                0 === $save_res           => new \WP_Error(
                     'save_error',
                     'An unknown error occurred while saving.',
                 ),
                 \is_wp_error( $save_res ) => $save_res,
-                default                  => $this,
+                default                   => $this,
             };
         }
     }
@@ -75,12 +75,13 @@ trait Prop_Setters {
      * the DB later.
      *
      * @since 3.0.0
-     * @param string $prop Name of prop to set.
-     * @param mixed  $value Value of the prop.
+     * @param  string $prop Name of prop to set.
+     * @param  mixed  $value Value of the prop.
+     * @return static
      */
-    protected function set_prop( $prop, $value ) {
+    protected function set_prop( $prop, $value ): static {
         if ( 'id' === \strtolower( $prop ) ) {
-            return;
+            return $this;
         }
 
         if ( $this->get_object_read() ) {
@@ -112,6 +113,8 @@ trait Prop_Setters {
             'string'        => $this->set_wc_data_prop( $prop, $value ),
             default         => $this->set_unknown_prop( $type, $prop, $value ),
         };
+
+        return $this;
     }
 
     /**
@@ -121,6 +124,7 @@ trait Prop_Setters {
      *
      * @param  string $prop  Prop name.
      * @param  mixed  $value Prop value.
+     * @return void
      */
     protected function set_wc_data_prop( $prop, $value ) {
         if ( ! \array_key_exists( $prop, $this->data ) ) {
@@ -144,13 +148,15 @@ trait Prop_Setters {
      *
      * @param  string $prop  Property name.
      * @param  mixed  $value Property value.
+     * @return void
      */
     protected function set_date_prop( $prop, $value ) {
         static $loop;
 
         if ( ! $loop ) {
             $loop = true;
-            return parent::set_date_prop( $prop, $value );
+            parent::set_date_prop( $prop, $value );
+            return;
         }
 
         $loop = false;
@@ -163,6 +169,7 @@ trait Prop_Setters {
      *
      * @param  string $prop  Property name.
      * @param  mixed  $value Property value.
+     * @return void
      */
     protected function set_bool_prop( string $prop, $value ) {
         if ( '' === $value ) {
@@ -179,9 +186,10 @@ trait Prop_Setters {
      *
      * @param  string            $prop Property name.
      * @param  mixed             $val  Property value.
-     * @param  T|class-string<T> $type Enum class.
+     * @param  null|T|class-string<T> $type Enum class.
+     * @return void
      */
-    protected function set_enum_prop( string $prop, mixed $val, $type = null ) {
+    protected function set_enum_prop( string $prop, mixed $val, null|string|BackedEnum $type = null ) {
         if ( $val instanceof $type ) {
             $this->set_wc_data_prop( $prop, $val );
             return;
@@ -203,6 +211,14 @@ trait Prop_Setters {
         }
     }
 
+    /**
+     * Set a single term prop
+     *
+     * @param  string $prop  Property name.
+     * @param  mixed  $value Property value.
+     * @param  string $field Field to map the term to.
+     * @return void
+     */
     protected function set_single_term_prop( string $prop, mixed $value, string $field ) {
         $value = (array) $value;
         $value = \array_shift( $value );
@@ -211,6 +227,14 @@ trait Prop_Setters {
         $this->set_wc_data_prop( $prop, $value );
     }
 
+    /**
+     * Set an array term prop
+     *
+     * @param  string $prop  Property name.
+     * @param  mixed  $value Property value.
+     * @param  string $field Field to map the term to.
+     * @return void
+     */
     protected function set_array_term_prop( string $prop, mixed $value, string $field ) {
         $value = \array_map(
             fn( $v ) => $this->map_term_field( $field, $v ),
@@ -220,29 +244,24 @@ trait Prop_Setters {
         $this->set_wc_data_prop( $prop, $value );
     }
 
-    private function map_term_field( string $field, mixed $value ) {
-        if ( $value instanceof \WP_Term ) {
-            return $value->$field;
-        }
-
-        return match ( $field ) {
-            'term_id' => \intval( $value ),
-            'parent'  => \intval( $value ),
-            'slug'    => \sanitize_title( $value ),
-            default   => $value,
-        };
-    }
-
     /**
      * Set an array prop
      *
      * @param  string $prop  Property name.
      * @param  mixed  $value Property value.
+     * @return void
      */
     protected function set_normal_arr_prop( string $prop, $value ) {
         $this->set_wc_data_prop( $prop, \wc_string_to_array( $value ) );
     }
 
+    /**
+     * Set an associative array prop
+     *
+     * @param  string $prop  Property name.
+     * @param  mixed  $value Property value.
+     * @return void
+     */
     protected function set_assoc_arr_prop( string $prop, $value ) {
         $value = \maybe_unserialize( $value );
         $this->set_wc_data_prop( $prop, $value );
@@ -253,6 +272,7 @@ trait Prop_Setters {
      *
      * @param  string $prop  Property name.
      * @param  mixed  $value Property value.
+     * @return void
      */
     protected function set_binary_prop( string $prop, $value ) {
         $value = $this->is_binary_string( $value )
@@ -262,6 +282,13 @@ trait Prop_Setters {
         $this->set_wc_data_prop( $prop, $value );
     }
 
+    /**
+     * Set a base64 string prop
+     *
+     * @param  string $prop  Property name.
+     * @param  mixed  $value Property value.
+     * @return void
+     */
     protected function set_base64_string_prop( string $prop, mixed $value ) {
         $value = match ( true ) {
             null === $value                   => null,
@@ -269,16 +296,20 @@ trait Prop_Setters {
             $this->is_base64_string( $value ) => \base64_decode( $value, true ),
             default                           => $value,
         };
+
+        $this->set_wc_data_prop( $prop, $value );
     }
 
     /**
      * Set a json prop
      *
-     * @param  string       $prop  Property name.
-     * @param  string|array $value Property value.
-     * @param  bool         $assoc Whether to return an associative array or not.
+     * @param  string              $prop  Property name.
+     * @param  string|array<mixed> $value Property value.
+     * @param  bool                $assoc Whether to return an associative array or not.
+     * @return void
      */
     protected function set_json_prop( string $prop, string|array $value, bool $assoc = true ) {
+        \error_log( 'set_json_prop called with value: ' . \print_r( $value, true ) );
         if ( ! \is_array( $value ) ) {
             $value = \json_decode( $value, $assoc );
         }
@@ -290,6 +321,7 @@ trait Prop_Setters {
      *
      * @param  string $prop  Property name.
      * @param  mixed  $value Property value.
+     * @return void
      */
     protected function set_int_prop( string $prop, $value ) {
         $this->set_wc_data_prop( $prop, \intval( $value ) );
@@ -300,14 +332,23 @@ trait Prop_Setters {
      *
      * @param  string $prop  Property name.
      * @param  mixed  $value Property value.
+     * @return void
      */
     protected function set_float_prop( string $prop, $value ) {
         $this->set_wc_data_prop( $prop, \floatval( $value ) );
     }
 
-    protected function set_slug_prop( string $prop, $value ) {
+    /**
+     * Set a slug prop
+     *
+     * @param  string $prop  Property name.
+     * @param  mixed  $value Property value.
+     * @return void
+     */
+    protected function set_slug_prop( string $prop, mixed $value ) {
         if ( ! $this->get_object_read() || '' === $value ) {
-            return $this->set_wc_data_prop( $prop, $value );
+            $this->set_wc_data_prop( $prop, $value );
+            return;
         }
 
         $value = \sanitize_title( $value );
@@ -322,13 +363,35 @@ trait Prop_Setters {
      * @param  string $type  Property type.
      * @param  string $prop  Property name.
      * @param  mixed  $value Property value.
+     * @return void
      */
     protected function set_unknown_prop( string $type, string $prop, mixed $value ) {
         if ( ! \method_exists( $this, "set_{$type}_prop" ) ) {
-            return $this->set_wc_data_prop( $prop, $value );
+            $this->set_wc_data_prop( $prop, $value );
 
+            return;
         }
 
         $this->{"set_{$type}_prop"}( $prop, $value );
+    }
+
+    /**
+     * Maps a term field to its value.
+     *
+     * @param  string|'term_id'|'parent'|'slug' $field  Field to map.
+     * @param  mixed  $value Field value
+     * @return string|int
+     */
+    private function map_term_field( string $field, mixed $value ): string|int {
+        if ( $value instanceof \WP_Term ) {
+            return $value->$field;
+        }
+
+        return match ( $field ) {
+            'term_id' => \intval( $value ),
+            'parent'  => \intval( $value ),
+            'slug'    => \sanitize_title( $value ),
+            default   => $value,
+        };
     }
 }

@@ -4,7 +4,7 @@ class XWC_Object_Query {
     /**
      * Array of SQL query clauses.
      *
-     * @var array
+     * @var array<string,string>
      */
     public array $clauses = array(
         'distinct' => '',
@@ -23,7 +23,7 @@ class XWC_Object_Query {
     /**
      * The objects being iterated over.
      *
-     * @var array<int, stdClass|int>
+     * @var array<int,stdClass|int>
      */
     public ?array $objects = null;
 
@@ -48,18 +48,36 @@ class XWC_Object_Query {
      */
     public ?int $pages = null;
 
+    /**
+     * The query variables used in the query.
+     *
+     * @var array<string,mixed>
+     */
     public array $vars = array();
 
+    /**
+     * Constructor for the XWC_Object_Query class.
+     *
+     * @param  string $table    The table name to query.
+     * @param  string $id_field The ID field of the table.
+     * @param  mixed  ...$query Optional query arguments to filter the results.
+     */
     public function __construct(
         protected string $table,
         protected string $id_field,
-        ...$query,
+        mixed ...$query,
     ) {
         $this->parse( $query );
         $this->reset();
         $this->get_objects();
     }
 
+    /**
+     * Executes the query and returns the objects.
+     *
+     * @param  ?array<string,mixed> $query Optional query arguments to filter the results.
+     * @return array<int,stdClass|int>
+     */
     public function query( ?array $query = null ) {
         if ( $query ) {
             $this->parse( $query );
@@ -69,6 +87,12 @@ class XWC_Object_Query {
         return $this->get_objects();
     }
 
+    /**
+     * Counts the number of objects in the query result.
+     *
+     * @param  ?array<string,mixed> $query Optional query arguments to filter the count.
+     * @return int
+     */
     public function count( ?array $query = null ): int {
         if ( $query ) {
             $query['nopaging']    = true;
@@ -82,7 +106,12 @@ class XWC_Object_Query {
         return $this->total;
     }
 
-    protected function parse( array $q ) {
+    /**
+     * Parses the query arguments and sets the query variables.
+     *
+     * @param  array<mixed> $q The query arguments.
+     */
+    protected function parse( array $q ): void {
         $d = array(
             'count_found' => true,
             'count_only'  => false,
@@ -114,12 +143,31 @@ class XWC_Object_Query {
         $this->vars = $q;
     }
 
-    protected function reset() {
+    /**
+     * Resets the query state.
+     *
+     * This method clears the SQL clauses, resets the SQL strings, and clears the objects,
+     * count, total, and pages properties.
+     *
+     * @return static
+     */
+    protected function reset(): static {
         $this->clauses   = \array_map( '__return_empty_string', $this->clauses );
         $this->sql       = '';
         $this->sql_count = '';
+        $this->objects   = null;
+        $this->count     = null;
+        $this->total     = null;
+        $this->pages     = null;
+
+        return $this;
     }
 
+    /**
+     * Retrieves the objects based on the query clauses and variables.
+     *
+     * @return array<int,stdClass|int>
+     */
     protected function get_objects(): array {
         $c = &$this->clauses;
         $q = &$this->vars;
@@ -129,7 +177,15 @@ class XWC_Object_Query {
         return $this->run_query( $c, $q );
     }
 
-    protected function init_query( &$c, &$q ) {
+    /**
+     * Initializes the query clauses based on the query variables.
+     *
+     * This method sets up the fields, columns, terms, orderby, and paging for the query.
+     *
+     * @param  array<string,string> $c Query clauses.
+     * @param  array<string,mixed>  $q Query variables.
+     */
+    protected function init_query( &$c, &$q ): void {
         $this->init_fields( $c, $q['fields'] );
         $this->init_columns( $c, $q );
         $this->init_terms( $c, $q );
@@ -142,10 +198,10 @@ class XWC_Object_Query {
     /**
      * Sets the fields to be selected.
      *
-     * @param  array  $clauses The query clauses.
-     * @param  string $fields  The fields to be selected.
+     * @param  array<string,string> $clauses The query clauses.
+     * @param  string               $fields  The fields to be selected.
      */
-    protected function init_fields( array &$clauses, string $fields ) {
+    protected function init_fields( array &$clauses, string $fields ): void {
         // Select the fields.
         $clauses['fields'] = match ( $fields ) {
             'ids'        => "{$this->table}.{$this->id_field}",
@@ -157,10 +213,10 @@ class XWC_Object_Query {
     /**
      * Initializes query columns.
      *
-     * @param  array $clauses The query clauses.
-     * @param  array $q The query variables.
+     * @param array<string,string> $c The query clauses.
+     * @param array<string,mixed>  $q The query variables.
      */
-    protected function init_columns( array &$clauses, array $q ) {
+    protected function init_columns( array &$c, array $q ): void {
         $cols = \array_filter(
             $q['col_query'] ?? array(),
             static fn( $v ) => ! \in_array(
@@ -171,17 +227,23 @@ class XWC_Object_Query {
         );
 
         if ( \count( $cols ) ) {
-            $clauses['where'] .= $this->get_sql_where_clauses( $cols, $q['relation'] ?? 'AND' );
+            $c['where'] .= $this->get_sql_where_clauses( $cols, $q['relation'] ?? 'AND' );
         }
 
         if ( ! isset( $q['date_query'] ) ) {
             return;
         }
 
-        $clauses['where'] .= ( new \WP_Date_Query( $q['date_query'] ) )->get_sql();
+        $c['where'] .= ( new \WP_Date_Query( $q['date_query'] ) )->get_sql();
     }
 
-    protected function init_terms( array &$clauses, array $q ) {
+    /**
+     * Initializes query terms.
+     *
+     * @param array<string,string> $c Query clauses.
+     * @param array<string,mixed>  $q Query variables.
+     */
+    protected function init_terms( array &$c, array $q ): void {
         if ( ! isset( $q['tax_query'] ) || ! $q['tax_query'] ) {
             return;
         }
@@ -189,14 +251,20 @@ class XWC_Object_Query {
         $wtq = new \WP_Tax_Query( $q['tax_query'] );
         $sql = $wtq->get_sql( $this->table, $this->id_field );
 
-        $clauses['join']  .= $sql['join'];
-        $clauses['where'] .= $sql['where'];
+        $c['join']  .= $sql['join'];
+        $c['where'] .= $sql['where'];
     }
 
-    protected function init_orderby( array &$clauses, array $q ) {
-        $clauses['orderby'] = 'ORDER BY ';
+    /**
+     * Initializes query orderby.
+     *
+     * @param array<string,string> $c Query clauses.
+     * @param array<string,mixed>  $q Query variables.
+     */
+    protected function init_orderby( array &$c, array $q ): void {
+        $c['orderby'] = 'ORDER BY ';
 
-        $clauses['orderby'] = match ( $q['orderby'] ) {
+        $c['orderby'] = match ( $q['orderby'] ) {
             'rand' => 'RAND()',
             $this->id_field => "{$this->table}.{$this->id_field} {$q['order']}",
             default => "{$this->table}.{$q['orderby']} {$q['order']}",
@@ -206,10 +274,10 @@ class XWC_Object_Query {
     /**
      * Initializes query paging.
      *
-     * @param  array $clauses The query clauses.
-     * @param  array $q The query variables.
+     * @param array<string,string> $c Query clauses.
+     * @param array<string,mixed>  $q Query variables.
      */
-    protected function init_paging( array &$clauses, array &$q ) {
+    protected function init_paging( array &$c, array &$q ): void {
         if ( $q['nopaging'] || ! $q['per_page'] ) {
             return;
         }
@@ -221,15 +289,15 @@ class XWC_Object_Query {
         } else {
             $pgstrt = \absint( ( $q['page'] - 1 ) * $q['per_page'] ) . ', ';
         }
-        $clauses['limits'] = 'LIMIT ' . $pgstrt . $q['per_page'];
+        $c['limits'] = 'LIMIT ' . $pgstrt . $q['per_page'];
     }
 
     /**
      * Get the SQL WHERE clauses for a query.
      *
-     * @param  array  $args        Query arguments.
-     * @param  string $clause_join SQL join clause. Can be AND or OR.
-     * @return string              SQL WHERE clauses.
+     * @param  array<string,mixed> $args        Query arguments.
+     * @param  string              $clause_join SQL join clause. Can be AND or OR.
+     * @return string                           SQL WHERE clauses.
      */
     protected function get_sql_where_clauses( $args, $clause_join ) {
         $clauses = array();
@@ -248,7 +316,9 @@ class XWC_Object_Query {
     /**
      * Get the SQL WHERE clause value depending on the type
      *
-     * @param string|array $value Value.
+     * @param  string $column Column name.
+     * @param  string $value  Value.
+     * @return string
      */
     protected function get_scalar_clause_value( $column, $value ) {
         global $wpdb;
@@ -268,6 +338,13 @@ class XWC_Object_Query {
         return \sprintf( '%1$s LIKE \'%2$s\' ', $column, $escaped_like );
     }
 
+    /**
+     * Get the SQL WHERE clause value for an array.
+     *
+     * @param  string        $col   The column name.
+     * @param  array<string> $value The values.
+     * @return string
+     */
     protected function get_array_clause_value( string $col, array $value ): string {
         $in  = array();
         $not = array();
@@ -309,40 +386,47 @@ class XWC_Object_Query {
     /**
      * Formats the object request SQL based on query variables.
      *
-     * @param  array $clauses The query clauses.
-     * @param  array $q       The query variables.
+     * @param  array<string,string> $c Query clauses.
+     * @param  array<string,mixed>  $q Query variables.
      */
-    protected function format_request_sql( array &$clauses, array &$q ) {
-        $clauses['groupby'] = $clauses['groupby'] ? 'GROUP BY ' . $clauses['groupby'] : '';
-        $clauses['orderby'] = $clauses['orderby'] ? 'ORDER BY ' . $clauses['orderby'] : '';
+    protected function format_request_sql( array &$c, array &$q ): void {
+        $c['groupby'] = $c['groupby'] ? 'GROUP BY ' . $c['groupby'] : '';
+        $c['orderby'] = $c['orderby'] ? 'ORDER BY ' . $c['orderby'] : '';
 
         $req = <<<SQL
-            SELECT {$clauses['fields']} FROM {$this->table}
+            SELECT {$c['fields']} FROM {$this->table}
             INNER JOIN (
                 SELECT {$this->id_field} FROM {$this->table}
-                {$clauses['join']}
-                WHERE 1=1 {$clauses['where']}
-                {$clauses['groupby']}
-                {$clauses['orderby']}
-                {$clauses['limits']}
+                {$c['join']}
+                WHERE 1=1 {$c['where']}
+                {$c['groupby']}
+                {$c['orderby']}
+                {$c['limits']}
             ) AS tmp USING ({$this->id_field})
-            {$clauses['orderby']}
+            {$c['orderby']}
             SQL;
 
         $this->sql = $req;
 
-        if ( ! $q['count_found'] || '' === $clauses['limits'] ) {
+        if ( ! $q['count_found'] || '' === $c['limits'] ) {
             return;
         }
 
         $this->sql_count = <<<SQL
             SELECT COUNT(*) FROM {$this->table}
-            {$clauses['join']}
-            WHERE 1=1 {$clauses['where']}
+            {$c['join']}
+            WHERE 1=1 {$c['where']}
             SQL;
     }
 
-    protected function run_query( array &$c, array $q ) {
+    /**
+     * Runs the query and returns the objects.
+     *
+     * @param  array<string,string> $c Query clauses.
+     * @param  array<string,mixed>  $q Query variables.
+     * @return array<int,stdClass|int>
+     */
+    protected function run_query( array &$c, array $q ): array {
         $this->objects ??= $this->query_database( $c, $q );
         $this->total   ??= $this->query_total_objects( $c, $q );
 
@@ -352,9 +436,9 @@ class XWC_Object_Query {
     /**
      * Query the database for the objects.
      *
-     * @param  array $c The query clauses.
-     * @param  array $q The query variables.
-     * @return array    The objects.
+     * @param  array<string,string> $c Query clauses.
+     * @param  array<string,mixed> $q Query variables.
+     * @return array<int,stdClass|int>
      */
     protected function query_database( array &$c, array $q ): array {
         global $wpdb;
@@ -367,7 +451,7 @@ class XWC_Object_Query {
         return 'ids' === $q['fields']
             ? \array_map( 'intval', $wpdb->get_col( $this->sql ) )
             : $wpdb->get_results( $this->sql );
-        // phpcs:enable
+        // phpcs:enable WordPress.DB.PreparedSQL.NotPrepared
     }
 
     /**
@@ -378,8 +462,8 @@ class XWC_Object_Query {
      *
      * @global wpdb $wpdb WordPress database abstraction object.
      *
-     * @param array $c     The query clauses.
-     * @param array $q     The query variables.
+     * @param  array<string,string> $c Query clauses.
+     * @param  array<string,mixed>  $q Query variables.
      * @return int
      */
     private function query_total_objects( array $c, array $q ) {
@@ -397,9 +481,9 @@ class XWC_Object_Query {
             \is_array( $this->objects )    => \count( $this->objects ),
             default                        => 0,
         };
-        // phpcs:enable
+        //phpcs:enable WordPress.DB.PreparedSQL.NotPrepared, WordPress.PHP
 
-        $this->pages = '' !== $c['limits'] ? \ceil( $found / $q['per_page'] ) : 1;
+        $this->pages = '' !== $c['limits'] ? (int) \ceil( $found / $q['per_page'] ) : 1;
 
         return $found;
     }

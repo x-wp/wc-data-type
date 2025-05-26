@@ -3,13 +3,11 @@
 namespace XWC\Data\Model;
 
 use XWC_Data;
-use XWC_Data_Store_XT;
 
 /**
  * Prop getters trait.
  *
  * @template TDt of XWC_Data
- * @template TDs of XWC_Data_Store_XT
  */
 trait Prop_Getters {
     /**
@@ -21,12 +19,17 @@ trait Prop_Getters {
      */
     protected array $core_data = array();
 
+    /**
+     * Taxonomy data.
+     *
+     * @var array<string,mixed>
+     */
     protected array $tax_data = array();
 
     /**
      * Array linking props to their types.
      *
-     * @var array<string, string>
+     * @var array<string,'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other'>
      */
     protected array $prop_types = array();
 
@@ -44,21 +47,6 @@ trait Prop_Getters {
      */
     protected array $required_data = array();
 
-    protected function is_binary_string( ?string $value ): bool {
-        //phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-        return ! (bool) @\mb_check_encoding( $value ?? '', 'UTF-8' );
-    }
-
-    protected function is_base64_string( ?string $value ): bool {
-        if ( ! \is_string( $value ) ) {
-            return false;
-        }
-
-        $dec = \base64_decode( $value, true );
-
-        return false !== $dec && \base64_encode( $dec ) === $value;
-    }
-
     public function get_prop_group( string $prop ): string {
         return match ( true ) {
             isset( $this->core_data[ $prop ] )  => 'core',
@@ -71,31 +59,17 @@ trait Prop_Getters {
     /**
      * Get prop types
      *
-     * @return array
+     * @return array<string,string>
      */
     public function get_prop_types(): array {
         return $this->prop_types;
     }
 
-    protected function get_prop_type( string $prop ): array {
-        $types = $this->prop_types[ $prop ] ?? 'string';
-        $types = \explode( '|', $types );
-        $type  = \array_shift( $types );
-
-        return array( $type, $types );
-    }
-
-    protected function get_prop_by_type( string $type ): null|string|array {
-        $types = \array_filter( $this->get_prop_types(), static fn( $t ) => $t === $type );
-        $types = \array_keys( $types );
-
-        return match ( \count( $types ) ) {
-            0       => null,
-            1       => $types[0],
-            default => $types,
-        };
-    }
-
+    /**
+     * Get core data keys
+     *
+     * @return array<int,string>
+     */
     public function get_core_keys(): array {
         return \array_keys( $this->core_data );
     }
@@ -119,6 +93,14 @@ trait Prop_Getters {
         return $data;
     }
 
+    /**
+     * Get core changes
+     *
+     * Returns an array of core data keys that have changed.
+     * The values are the values that will be saved to the database.
+     *
+     * @return array<string,mixed>
+     */
     public function get_core_changes(): array {
         $changed = array();
         $props   = \array_intersect( $this->get_core_keys(), \array_keys( $this->changes ) );
@@ -134,6 +116,13 @@ trait Prop_Getters {
         return $changed;
     }
 
+    /**
+     * Get all data for this object.
+     *
+     * This includes core data, extra data, and meta data.
+     *
+     * @return array<string,mixed>
+     */
     public function get_data() {
         $data = parent::get_data();
 
@@ -142,6 +131,60 @@ trait Prop_Getters {
         }
 
         return $data;
+    }
+
+    /**
+     * Get the type of a prop.
+     *
+     * @param  string $prop Name of prop to get type for.
+     * @return array{
+     *   0: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other',
+     *   1: array<int,mixed>
+     * } | array{0: 'enum', 1: array{0: class-string<BackedEnum>}}
+     */
+    protected function get_prop_type( string $prop ): array {
+        $types = $this->prop_types[ $prop ] ?? 'string';
+        $types = \explode( '|', $types );
+        /**
+         * Variable narrowing for prop types.
+         *
+         * @var 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other' $type
+         */
+        $type = \array_shift( $types );
+
+        return array( $type, $types );
+    }
+
+    protected function is_binary_string( ?string $value ): bool {
+        //phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+        return ! (bool) @\mb_check_encoding( $value ?? '', 'UTF-8' );
+    }
+
+    protected function is_base64_string( ?string $value ): bool {
+        if ( ! \is_string( $value ) ) {
+            return false;
+        }
+
+        $dec = \base64_decode( $value, true );
+
+        return false !== $dec && \base64_encode( $dec ) === $value;
+    }
+
+    /**
+     * Get prop(s) by type.
+     *
+     * @param  string            $type Type of prop to get.
+     * @return ($type is 'date_created' ? null|string : ($type is 'date_updated' ? null|string : null|string|array<string>))
+     */
+    protected function get_prop_by_type( string $type ): null|string|array {
+        $types = \array_filter( $this->get_prop_types(), static fn( $t ) => $t === $type );
+        $types = \array_keys( $types );
+
+        return match ( \count( $types ) ) {
+            0       => null,
+            1       => $types[0],
+            default => $types,
+        };
     }
 
     /**
@@ -195,20 +238,32 @@ trait Prop_Getters {
         return \gmdate( 'Y-m-d H:i:s', $value->getOffsetTimestamp() );
     }
 
-    protected function get_bool_prop( $value, $format = 'string' ) {
+    /**
+     * Get boolean prop value.
+     *
+     * @param  mixed          $value  Value to convert to a boolean.
+     * @param  'string'|'int' $format Format of the boolean value.
+     * @return 'yes'|'no'|int<0,1>
+     */
+    protected function get_bool_prop( mixed $value, string $format = 'string' ): int|string {
         return match ( $format ) {
             'string'  => \wc_bool_to_string( $value ),
             'int'     => (int) \wc_string_to_bool( $value ),
-            default   => (bool) $value,
         };
     }
 
-    protected function get_array_prop( $value, $format = 'assoc' ) {
+    /**
+     * Get array prop value.
+     *
+     * @param  mixed            $value  Value to convert to a string.
+     * @param  'assoc'|'normal' $format Format of the array.
+     * @return string
+     */
+    protected function get_array_prop( mixed $value, string $format = 'assoc' ): string {
         return match ( $format ) {
             // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
             'assoc'  => \serialize( $value ),
             'normal' => \implode( ',', $value ),
-            default  => $value,
         };
     }
 
@@ -239,11 +294,24 @@ trait Prop_Getters {
         return $enum_val->value;
     }
 
-    protected function get_json_prop( $value, int $flags = 0 ): string {
-        return \wp_json_encode( $value, $flags );
+    /**
+     * Get JSON prop value.
+     *
+     * @param  mixed  $value Value to encode to JSON.
+     * @param  int    $flags Optional. JSON encoding flags. Default 0.
+     * @return string
+     */
+    protected function get_json_prop( mixed $value, int $flags = 0 ): string {
+        return (string) \wp_json_encode( $value, $flags );
     }
 
-    protected function get_binary_prop( $value ): string {
+    /**
+     * Get a binary string prop value.
+     *
+     * @param  mixed  $value Value to decode from hex to binary.
+     * @return string
+     */
+    protected function get_binary_prop( mixed $value ): string {
         return ! $this->is_binary_string( $value ) ? \hex2bin( $value ) : $value;
     }
 

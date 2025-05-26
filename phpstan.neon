@@ -1,8 +1,17 @@
 parameters:
-  level: 5
+  level: 7
   paths:
+    - lib
     - src
-  stubFiles:
-    - stubs/wc-override.php
-  bootstrapFiles:
-    - vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
+  excludePaths:
+      analyse:
+        - lib/classes
+        - lib/functions
+        - lib/interfaces
+        - lib/mixins
+        - src/Interfaces/WC_Data_Definition.php
+  ignoreErrors:
+    -
+      identifier: method.childReturnType
+      path: src/Core/XWC_Data.php
+
