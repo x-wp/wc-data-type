@@ -1,4 +1,4 @@
-<?php
+<?php //phpcs:disable SlevomatCodingStandard.Functions.RequireMultiLineCall.RequiredMultiLineCall
 
 namespace XWC\Data\Repo;
 
@@ -13,16 +13,16 @@ trait Lookup_Handler {
     /**
      * Array of updated props
      *
-     * @var string[]
+     * @var array<string>
      */
-	protected array $updated_props = array();
+    protected array $updated_props = array();
 
     /**
      * Lookup table data keys
      *
-     * @var string[]
+     * @var array<string>
      */
-	protected array $lookup_data_keys = array();
+    protected array $lookup_data_keys = array();
 
     /**
      * Get the lookup table for the data store.
@@ -36,15 +36,14 @@ trait Lookup_Handler {
     /**
      * Handle updated meta props after updating entity meta.
      *
-     * @param T $data Data object.
+     * @param  T $data Data object.
+     * @return void
      */
-	protected function handle_updated_props( &$data ) {
-		if ( \array_intersect( $this->updated_props, $this->lookup_data_keys ) && ! \is_null(
-            $this->get_lookup_table_name(),
-        ) ) {
+    protected function handle_updated_props( &$data ) {
+        if ( \array_intersect( $this->updated_props, $this->lookup_data_keys ) && ! \is_null( $this->get_lookup_table_name(), ) ) {
             $this->update_lookup_table( $data->get_id(), $this->get_lookup_table_name() );
-		}
+        }
 
         $this->updated_props = array();
-	}
+    }
 }

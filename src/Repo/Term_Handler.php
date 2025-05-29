@@ -2,6 +2,7 @@
 
 namespace XWC\Data\Repo;
 
+use WP_Term;
 use XWC_Data;
 
 /**
@@ -11,37 +12,77 @@ use XWC_Data;
  */
 trait Term_Handler {
     /**
-     * Term props
+     * Taxonomy to property mapping.
      *
-     * @var array
+     * @var array<string,string>
      */
-    protected $term_props = array();
-
-    protected array $must_exist_term_props = array();
-
-    protected array $default_term_ids = array();
-
-    public array $term_query_vars = array();
+    protected array $tax_to_props = array();
 
     /**
-	 * Get and store terms from a taxonomy.
-	 *
-	 * @param  T|int  $data     Object or object ID.
-	 * @param  string $taxonomy Taxonomy name e.g. product_cat.
-	 * @return array of terms
-	 */
-	protected function get_term_ids( $data, $taxonomy ) {
-		$object_id = \is_numeric( $data ) ? $data : $data->get_id();
-        /**
-         * Variable override
-         *
-         * @var array<int>|\WP_Error $terms
-         */
-		$terms = \wp_get_object_terms( $object_id, $taxonomy, array( 'fields' => 'ids' ) );
+     * Properties that must exist for terms.
+     *
+     * @var array<string>
+     */
+    protected array $must_exist_term_props = array();
+
+    /**
+     * Default term IDs for properties that must exist.
+     *
+     * @var array<string,array<int>>
+     */
+    protected array $default_term_ids = array();
+
+    /**
+     * Read term data.
+     *
+     * @param T $data Data object.
+     */
+    protected function read_term_data( \XWC_Data &$data ): void {
+        foreach ( $this->get_tax_to_props() as $tax => $prop ) {
+            $data->{"set_$prop"}( $this->get_terms( $data, $tax ) );
+        }
+    }
+
+    /**
+     * Update term data.
+     *
+     * @param  T    $data Data object.
+     * @param  bool $force Force update even if no changes.
+     */
+    protected function update_term_data( \XWC_Data &$data, bool $force = false ): void {
+        $changes = $data->get_changes();
+
+        foreach ( $this->get_tax_to_props() as $tax => $prop ) {
+            if ( ! $force && ! isset( $changes[ $prop ] ) ) {
+                continue;
+            }
+
+            $terms = $data->{"get_$prop"}( 'db' );
+
+            \wp_set_object_terms( $data->get_id(), \wp_list_pluck( $terms, 'term_id' ), $tax, false );
+        }
+    }
+
+    /**
+     * Get terms for a taxonomy.
+     *
+     * @param  T $data Data object.
+     * @param  string $taxonomy Taxonomy.
+     * @return array<WP_Term>
+     */
+    protected function get_terms( \XWC_Data $data, string $taxonomy ) {
+        $terms = \wp_get_object_terms( $data->get_id(), $taxonomy );
 
         return ! \is_wp_error( $terms ) ? $terms : array();
-	}
+    }
 
+    /**
+     * Get the prop data for a set of terms.
+     *
+     * @param  array<int|string> $terms Array of term IDs.
+     * @param  string $prop Property name.
+     * @return array<int>
+     */
     protected function get_term_prop_data( array $terms, string $prop ): array {
         $terms = \wp_parse_id_list( $terms );
         $terms = \array_filter( $terms );
@@ -54,37 +95,16 @@ trait Term_Handler {
     }
 
     /**
-     * For all stored terms in all taxonomies save them to the DB.
+     * Delete term data.
      *
-     * @param T $data Data Object.
-     * @param bool    $force  Force update. Used during create.
+     * @param  \XWC_Data $data Data object.
      */
-    protected function update_terms( &$data, $force = false ) {
-        if ( ! $this->term_props ) {
+    protected function delete_term_data( \XWC_Data $data ): void {
+        $taxonomies = \array_keys( $this->get_tax_to_props() );
+
+        if ( ! $taxonomies ) {
             return;
         }
-
-        $changes = $data->get_changes();
-
-        foreach ( $this->term_props as $term_prop => $taxonomy ) {
-            if ( ! $force && ! isset( $changes[ $term_prop ] ) ) {
-                continue;
-            }
-
-            $terms = $data->{"get_$term_prop"}( 'edit' );
-            $terms = $this->get_term_prop_data( (array) $terms, $term_prop );
-
-            \wp_set_object_terms( $data->get_id(), $terms, $taxonomy, false );
-
-            $data->{"set_$term_prop"}( $terms );
-        }
-    }
-
-    protected function delete_terms( int $object_id ) {
-        if ( \count( $this->term_props ) <= 0 ) {
-            return;
-        }
-
-        \wp_delete_object_term_relationships( $object_id, \array_values( $this->term_props ) );
+        \wp_delete_object_term_relationships( $data->get_id(), $taxonomies );
     }
 }

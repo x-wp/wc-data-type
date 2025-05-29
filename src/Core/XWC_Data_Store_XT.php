@@ -15,9 +15,32 @@ use XWC\Data\Repo;
  * @template T of XWC_Data
  */
 class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store_Interface {
+    /**
+     * Meta handler trait.
+     *
+     * @use Repo\Meta_Handler<T>
+     */
     use Repo\Meta_Handler;
+
+    /**
+     * Term handler trait.
+     *
+     * @use Repo\Term_Handler<T>
+     */
     use Repo\Term_Handler;
+
+    /**
+     * Lookup handler trait.
+     *
+     * @use Repo\Lookup_Handler<T>
+     */
     use Repo\Lookup_Handler;
+
+    /**
+     * Query handler trait.
+     *
+     * @use Repo\Query_Handler<T>
+     */
     use Repo\Query_Handler;
 
     protected string $object_type;
@@ -25,7 +48,14 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
     /**
      * Object arguments.
      *
-     * @var array
+     * @var array{
+     *   core_data: array<string,mixed>,
+     *   data: array<string,mixed>,
+     *   tax_data: array<string,mixed>,
+     *   prop_types: array<string,'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other'>,
+     *   unique_data: array<string>,
+     *   required_data: array<string>,
+     * }
      */
     protected array $object_args;
 
@@ -33,17 +63,46 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
 
     protected string $table;
 
+    /**
+     * Column names to property names.
+     *
+     * @var array<string,string>
+     */
     protected array $cols_to_props = array();
 
+    /**
+     * Meta keys to property names.
+     *
+     * @var array<string,string>
+     */
     protected array $meta_to_props = array();
 
     /**
-	 * Data stored in meta keys, but not considered "meta" for an object.
-	 *
-	 * @var array<string>
-	 */
-	protected $internal_meta_keys = array();
+     * Taxonomy keys to property names.
+     *
+     * @var array<string,string>
+     */
+    protected array $tax_to_props = array();
 
+    /**
+     * Taxonomy fields.
+     *
+     * @var array<string>
+     */
+    protected array $tax_fields = array();
+
+    /**
+     * Data stored in meta keys, but not considered "meta" for an object.
+     *
+     * @var array<string>
+     */
+    protected $internal_meta_keys = array();
+
+    /**
+     * Meta store.
+     *
+     * @var ?XWC_Meta_Store<T>
+     */
     protected ?XWC_Meta_Store $meta_store;
 
     public function get_object_type(): string {
@@ -51,13 +110,15 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
     }
 
     /**
-     * Undocumented function
+     * Get the object arguments.
      *
      * @return array{
-     *   core_data: array<string, mixed>,
-     *   data: array<string, mixed>,
-     *   prop_types: array<string, string>,
+     *   core_data: array<string,mixed>,
+     *   data: array<string,mixed>,
+     *   tax_data: array<string,mixed>,
+     *   prop_types: array<string,'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other'>,
      *   unique_data: array<string>,
+     *   required_data: array<string>,
      * }
      */
     public function get_object_args(): array {
@@ -77,42 +138,92 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
         return $this->id_field;
     }
 
+    /**
+     * Get the column names to property names mapping.
+     *
+     * @return array<string,string>
+     */
     public function get_cols_to_props(): array {
         return $this->cols_to_props;
     }
 
+    /**
+     * Get the meta keys to property names mapping.
+     *
+     * @return array<string,string>
+     */
     public function get_meta_to_props(): array {
         return $this->meta_to_props;
     }
 
+    /**
+     * Get the taxonomy keys to property names mapping.
+     *
+     * @return array<string,string>
+     */
+    public function get_tax_to_props(): array {
+        return $this->tax_to_props;
+    }
+
+    /**
+     * Get the taxonomy fields.
+     *
+     * @return array<string>
+     */
+    public function get_tax_fields(): array {
+        return $this->tax_fields;
+    }
+
+    /**
+     * Get the meta store.
+     *
+     * @return ?XWC_Meta_Store<T>
+     */
     public function get_meta_store(): ?XWC_Meta_Store {
         return $this->meta_store;
     }
 
-    public function __construct( Entity $e ) {
+    /**
+     * Initialize the data store.
+     *
+     * @template TFc of XWC_Object_Factory<T>
+     *
+     * @param  Entity<T,static,TFc,XWC_Meta_Store<T>> $e Entity object.
+     * @return static
+     */
+    public function initialize( Entity $e ): static {
         $this->object_type   = $e->name;
         $this->table         = $e->table;
         $this->id_field      = $e->id_field;
         $this->cols_to_props = $e->cols_to_props;
         $this->meta_to_props = $e->meta_to_props;
+        $this->tax_to_props  = $e->tax_to_props;
+        $this->tax_fields    = $e->tax_fields;
         $this->meta_store    = $e->meta_store;
 
         $this->internal_meta_keys = \array_keys( $this->meta_to_props );
 
+        // @phpstan-ignore assign.propertyType
         $this->object_args = array(
-            'core_data'   => $e->core_data,
-            'data'        => $e->data,
-            'prop_types'  => $e->prop_types,
-            'unique_data' => $e->unique_data,
+            'core_data'     => $e->core_data,
+            'data'          => $e->data,
+            'has_meta'      => $e->has_meta,
+            'prop_types'    => $e->prop_types,
+            'required_data' => $e->required_data,
+            'tax_data'      => $e->tax_data,
+            'unique_data'   => $e->unique_data,
         );
+
+        return $this;
     }
 
     /**
      * {@inheritDoc}
      *
-     * @param T $data Data object.
+     * @param  T $data Data object.
+     * @return void
      */
-	public function create( &$data ) {
+    public function create( &$data ) {
         $id = $this->persist_save(
             'insert',
             array( 'data' => $data->get_core_data( 'db' ) ),
@@ -122,54 +233,33 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
             throw new \Exception( 'Failed to create Entity' );
         }
 
-		$data->set_id( $id );
+        $data->set_id( $id );
 
         $this->update_prop_data( $data );
         $this->update_meta_data( $data );
+        $this->update_term_data( $data, true );
         $this->update_extra_data( $data );
-		$this->update_cache_data( $data );
+        $this->update_custom_data( $data );
+        $this->update_cache_data( $data );
 
         $data->apply_changes();
 
         // Documented in `WC_Data_Store_WP`.
         \do_action( 'woocommerce_new_' . $this->get_object_type(), $data->get_id(), $data );
-	}
-
-    protected function persist_save( string $callback, array $args ) {
-        global $wpdb;
-        $args['data'] = $this->remap_columns( $args['data'] );
-
-        $res = $wpdb->$callback( $this->get_table(), ...$args );
-
-        if ( $res && 'insert' === $callback ) {
-            return $wpdb->insert_id;
-        }
-
-        return $res;
-    }
-
-    protected function remap_columns( array $data, bool $flip = false ): array {
-        $map = $this->get_cols_to_props();
-        $map = $flip ? \array_flip( $map ) : $map;
-        $val = array();
-
-        foreach ( $data as $key => $value ) {
-            $val[ $map[ $key ] ?? $key ] = $value;
-        }
-
-        return $val;
     }
 
     /**
      * {@inheritDoc}
      *
-     * @param T $data Package object.
+     * @param  T $data Package object.
+     * @return void
      *
      * @throws \Exception If invalid Entity.
      */
     public function read( &$data ) {
         $this->read_core_data( $data );
         $this->read_prop_data( $data );
+        $this->read_term_data( $data );
         $this->read_extra_data( $data );
 
         $data->set_object_read( true );
@@ -178,41 +268,11 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
         \do_action( "woocommerce_{$this->get_object_type()}_read", $data->get_id() );
     }
 
-    protected function read_core_data( XWC_Data &$data ) {
-        if ( $data->get_core_data_read() ) {
-            return;
-        }
-
-        $props = $this->get_data_row( $data->get_id() );
-        $props = $this->remap_columns( $props, true );
-
-        $data->set_defaults();
-        $data->set_props( $props );
-    }
-
-    protected function get_data_row( int $id ): array {
-        global $wpdb;
-
-        $data_row = $wpdb->get_row(
-            $wpdb->prepare(
-                "SELECT * FROM %i WHERE {$this->get_id_field()} = %d",
-                $this->get_table(),
-                $id,
-            ),
-            ARRAY_A,
-        ) ?? false;
-
-        if ( ! $id || ! $data_row ) {
-            throw new \Exception( 'Invalid Entity' );
-        }
-
-        return $data_row;
-    }
-
     /**
      * {@inheritDoc}
      *
-     * @param T $data Data Object.
+     * @param  T $data Data Object.
+     * @return void
      */
     public function update( &$data ) {
         $changes = $data->get_core_changes();
@@ -221,15 +281,17 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
             $this->persist_save(
                 'update',
                 array(
-					'data'  => $changes,
-					'where' => array( $this->get_id_field() => $data->get_id() ),
+                    'data'  => $changes,
+                    'where' => array( $this->get_id_field() => $data->get_id() ),
                 ),
-			);
+            );
         }
 
         $this->update_prop_data( $data );
         $this->update_meta_data( $data );
+        $this->update_term_data( $data );
         $this->update_extra_data( $data );
+        $this->update_custom_data( $data );
         $this->update_cache_data( $data );
 
         $data->apply_changes();
@@ -260,8 +322,8 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
 
         $wpdb->delete( $this->get_table(), array( $this->get_id_field() => $data->get_id() ) );
 
-        $this->delete_all_meta( $obj_id );
-        $this->delete_terms( $obj_id );
+        $this->delete_all_meta( $data );
+        $this->delete_term_data( $data );
 
         $data->set_id( 0 );
 
@@ -269,28 +331,6 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
         \do_action( 'woocommerce_delete_' . $this->get_object_type(), $obj_id, $data, $args );
 
         return true;
-    }
-
-    /**
-     * Get entity count
-     *
-     * @param  array  $args        Query arguments.
-     * @param  string $clause_join SQL join clause. Can be AND or OR.
-     * @return int                 Count.
-     */
-    public function get_entity_count( $args = array(), $clause_join = 'AND' ) {
-		return 0;
-    }
-
-    /**
-     * Get entities from the database
-     *
-     * @param  array  $args        Query arguments.
-     * @param  string $clause_join SQL join clause. Can be AND or OR.
-     * @return object[]            Array of entities.
-     */
-    public function get_entities( $args = array(), $clause_join = 'AND' ) {
-		return $this->query( $args );
     }
 
     /**
@@ -354,24 +394,110 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
     }
 
     /**
-     * Get a single entity from the database
+     * Save data to the database.
      *
-     * @param  array  $args        Query arguments.
-     * @param  string $clause_join SQL join clause. Can be AND or OR.
-     * @return int|object|null     Entity ID or object. Null if not found.
+     * @param  'insert'|'update'   $callback Callback method name.
+     * @param  array<string,mixed> $args     Arguments for the callback.
+     * @return ($callback is 'insert' ? int<0,max> : int|bool)
      */
-    public function get_entity( $args = array(), $clause_join = 'AND' ) {
-        $args = \array_merge( $args, array( 'limit' => 1 ) );
+    protected function persist_save( string $callback, array $args ): int|bool {
+        global $wpdb;
+        $args['data'] = $this->remap_columns( $args['data'] );
 
-        return $this->query( $args )[0] ?? null;
+        $res = match ( $callback ) {
+            'insert' => $wpdb->insert( $this->get_table(), ...$args ),
+            'update' => $wpdb->update( $this->get_table(), ...$args ),
+        };
+
+        if ( $res && 'insert' === $callback ) {
+            return $wpdb->insert_id;
+        }
+
+        return $res;
+    }
+
+    /**
+     * Remap columns to properties.
+     *
+     * @param  array<string,mixed> $data Data to remap.
+     * @param  bool                $flip Whether to flip the mapping.
+     * @return array<string,mixed>        Remapped data.
+     */
+    protected function remap_columns( array $data, bool $flip = false ): array {
+        $map = $this->get_cols_to_props();
+        $map = $flip ? \array_flip( $map ) : $map;
+        $val = array();
+
+        foreach ( $data as $key => $value ) {
+            $val[ $map[ $key ] ?? $key ] = $value;
+        }
+
+        return $val;
+    }
+
+    /**
+     * Read core data for the entity.
+     *
+     * @param T $data Data object.
+     *
+     * @throws \Exception If the entity is invalid.
+     */
+    protected function read_core_data( XWC_Data &$data ): void {
+        if ( $data->get_core_data_read() ) {
+            return;
+        }
+
+        $props = $this->get_data_row( $data->get_id() );
+        $props = $this->remap_columns( $props, true );
+
+        $data->set_defaults();
+        $data->set_props( $props );
+    }
+
+    /**
+     * Get a data row from the database.
+     *
+     * @param  int   $id Entity ID.
+     * @return array<string,mixed>
+     *
+     * @throws \Exception If the entity is invalid.
+     */
+    protected function get_data_row( int $id ): array {
+        global $wpdb;
+
+        $data_row = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT * FROM %i WHERE {$this->get_id_field()} = %d",
+                $this->get_table(),
+                $id,
+            ),
+            ARRAY_A,
+        ) ?? false;
+
+        if ( ! $id || ! $data_row ) {
+            throw new \Exception( 'Invalid Entity' );
+        }
+
+        return $data_row;
     }
 
     /**
      * Clear caches.
      *
-     * @param T $data Data object.
+     * @param  T $data Data object.
+     * @return void
      */
-	protected function update_cache_data( &$data ) {
-		\WC_Cache_Helper::invalidate_cache_group( $this->get_object_type() . '_' . $data->get_id() );
-	}
+    protected function update_cache_data( &$data ) {
+        \WC_Cache_Helper::invalidate_cache_group( $this->get_object_type() . '_' . $data->get_id() );
+    }
+
+    /**
+     * Update custom data.
+     *
+     * @param  T $data Data object.
+     * @return void
+     */
+    protected function update_custom_data( &$data ) {
+        // Placeholder for custom data update.
+    }
 }

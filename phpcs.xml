@@ -1,11 +1,12 @@
 <?xml version="1.0"?>
-<ruleset name="WC Subscription downloads">
-	<config name="minimum_wp_version" value="6.5"/>
+<ruleset name="WC Data Type">
+	<config name="minimum_wp_version" value="6.6"/>
   <config name="testVersion" value="8.0-"/>
 
   <rule ref="Oblak"/>
   <rule ref="Oblak-WooCommerce"/>
   <rule ref="Oblak-Advanced"/>
+  <rule ref="Oblak-Slevomat"/>
 
   <rule ref="Squiz.Commenting">
     <severity>0</severity>
@@ -22,21 +23,6 @@
 				<element value="woocommerce"/>
 			</property>
 		</properties>
-	</rule>
-
-  <rule ref="WordPress">
-      <exclude name="Generic.WhiteSpace.DisallowSpaceIndent" />
-  </rule>
-  <rule ref="Generic.WhiteSpace.ScopeIndent">
-      <properties>
-          <property name="indent" value="4"/>
-          <property name="tabIndent" value="false"/>
-      </properties>
-  </rule>
-  <rule ref="Generic.WhiteSpace.DisallowTabIndent" />
-
-  <rule ref="WordPress">
-    <exclude name="WordPress.Arrays.ArrayDeclarationSpacing"/>
 	</rule>
 
   <rule ref="SlevomatCodingStandard.Operators.SpreadOperatorSpacing">

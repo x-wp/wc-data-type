@@ -2,6 +2,8 @@
 
 namespace XWC\Data;
 
+use Psr\Container\ContainerInterface;
+use WP_Error;
 use XWC\Data\Decorators\Model;
 use XWC_Data;
 use XWC_Data_Store_XT;
@@ -12,16 +14,6 @@ use XWP\Helper\Traits\Singleton;
 
 /**
  * Entity manager.
- *
- * @template T of XWC_Data
- * @template R of XWC_Data_Store_XT
- * @template M of XWC_Meta_Store
- * @template F of XWC_Object_Factory
- *
- * @phpstan-type TheEntity Entity<T,R,M,F>
- *
- * @method static Entity<T>|WP_Error                      register(string $classname)      Register a data type.
- * @method static array<string, TheEntity>|TheEntity|null get_entity(?string $name = null) Get all registered entities or a specific entity.
  */
 final class Entity_Manager {
     use Singleton;
@@ -29,27 +21,30 @@ final class Entity_Manager {
     /**
      * Registered entities.
      *
-     * @var array<string, Entity<T,R,M,F>>
-     *
-     * @phan-var array<string, TheEntity>
+     * @var array<string,Entity<XWC_Data,XWC_Data_Store_XT<XWC_Data>,XWC_Object_Factory<XWC_Data>,XWC_Meta_Store<XWC_Data>>>
      */
     private array $entities = array();
 
     /**
-     * Call dynamic methods on the singleton instance.
+     * Register a data type model.
      *
-     * @param  string $name     Method name.
-     * @param  mixed  $arguments Method arguments.
+     * @template TData of XWC_Data
+     * @param  class-string<TData> $classname Data type class name.
+     * @param  ?ContainerInterface $container Optional. The XWP-DI container instance.
+     * @return Entity<TData,XWC_Data_Store_XT<TData>,XWC_Object_Factory<TData>,XWC_Meta_Store<TData>>|WP_Error
      */
-    public static function __callStatic( $name, $arguments ) {
-        return self::instance()->$name( ...$arguments );
+    public static function register( string $classname, ?ContainerInterface $container = null ): Entity|\WP_Error {
+        return self::instance()->do_register( $classname, $container );
     }
 
-    public function __call( string $name, $arguments ) {
-        return match ( $name ) {
-            'get_models' => null,
-            default      => $this->$name( ...$arguments ),
-        };
+    /**
+     * Get all registered entities or a specific entity.
+     *
+     * @param  string|null       $name Entity name. If null, returns all registered entities.
+     * @return (  $name is null ? array<Entity<XWC_Data,XWC_Data_Store_XT<XWC_Data>,XWC_Object_Factory<XWC_Data>,XWC_Meta_Store<XWC_Data>>> : Entity<XWC_Data,XWC_Data_Store_XT<XWC_Data>,XWC_Object_Factory<XWC_Data>,XWC_Meta_Store<XWC_Data>>|null )
+     */
+    public static function get_entity( ?string $name = null ): array|Entity|null {
+        return self::instance()->do_get_entity( $name );
     }
 
     protected function __construct() {
@@ -59,26 +54,38 @@ final class Entity_Manager {
     }
 
     /**
+     * Dynamic method call handler.
+     *
+     * @param  string       $name Method name.
+     * @param  array<mixed> $args Method arguments.
+     * @return mixed
+     */
+    public function __call( string $name, array $args ): mixed {
+        return match ( $name ) {
+            'get_models' => null,
+            default      => $this->$name( ...$args ),
+        };
+    }
+
+    /**
      * Get all registered entities or a specific entity.
      *
      * @param  string|null $name Entity name.
-     * @return array<string, Entity<T>>|Entity<T>|null
-     *
-     * @phan-return array<string, TheEntity>|TheEntity|null
+     * @return null|Entity<XWC_Data,XWC_Data_Store_XT<XWC_Data>,XWC_Object_Factory<XWC_Data>,XWC_Meta_Store<XWC_Data>>|array<string,mixed>
      */
-    protected function get_entity( ?string $name = null ): array|Entity|null {
+    protected function do_get_entity( ?string $name = null ): array|Entity|null {
         return $name ? ( $this->entities[ $name ] ?? null ) : $this->entities;
     }
 
     /**
      * Register a data type model.
      *
-     * @param  class-string<T> $classname Data type class name.
-     * @return Entity<T>|\WP_Error
-     *
-     * @phpstan-return TheEntity|\WP_Error
+     * @template TData of XWC_Data
+     * @param  class-string<TData> $classname Data type class name.
+     * @param  ?ContainerInterface $container Optional. The XWP-DI container instance.
+     * @return Entity<TData,XWC_Data_Store_XT<TData>,XWC_Object_Factory<TData>,XWC_Meta_Store<TData>>|WP_Error
      */
-    protected function register( string $classname ): Entity|\WP_Error {
+    protected function do_register( string $classname, ?ContainerInterface $container = null ): Entity|\WP_Error {
         try {
             if ( ! \class_exists( $classname ) ) {
                 throw new \WC_Data_Exception( 'invalid_data_type', 'Invalid entity classname' );
@@ -87,12 +94,14 @@ final class Entity_Manager {
             $models = $this->get_models( $classname );
             $entity = new Entity( ...$models );
 
-            // @phpstan-ignore-next-line
-            $this->entities[ $entity->name ] = $entity;
+            $this->entities[ $entity->name ] = null !== $container
+                ? $entity->with_container( $container )
+                : $entity;
 
             $entity->add_hooks();
 
-            return new \WP_Error( 'aaa', 'a', 'a' );
+            return $entity;
+
         } catch ( \WC_Data_Exception $e ) {
             return new \WP_Error( $e->getCode(), $e->getMessage(), $e->getErrorData() );
         }
@@ -101,8 +110,9 @@ final class Entity_Manager {
     /**
      * Get entity definitions for a class.
      *
-     * @param  class-string<T> $target Target classname.
-     * @return array<Model>
+     * @template TData of XWC_Data
+     * @param  class-string<TData> $target Target classname.
+     * @return array<Model<TData,XWC_Data_Store_XT<TData>,XWC_Object_Factory<TData>,XWC_Meta_Store<TData>>>
      */
     protected function get_models( string $target ): array {
         $defs  = array();
