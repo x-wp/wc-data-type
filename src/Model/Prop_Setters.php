@@ -3,9 +3,11 @@
 namespace XWC\Data\Model;
 
 use BackedEnum;
+use WC_Data_Exception;
 use XWC_Data;
 use XWC_Data_Store_XT;
 use XWC_Meta_Store;
+use XWC_Prop;
 
 /**
  * Prop setters trait.
@@ -22,7 +24,7 @@ trait Prop_Setters {
      *
      * @param  string $prop Name of prop to get type for.
      * @return array{
-     *   0: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other',
+     *   0: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'other'|string|class-string,
      *   1: array<int,mixed>
      * } | array{0: 'enum', 1: array{0: class-string<BackedEnum>}}
      */
@@ -111,6 +113,7 @@ trait Prop_Setters {
             'float'         => $this->set_float_prop( $prop, $value ),
             'slug'          => $this->set_slug_prop( $prop, $value ),
             'string'        => $this->set_wc_data_prop( $prop, $value ),
+            'object'        => $this->set_object_prop( $prop, $value ),
             default         => $this->set_unknown_prop( $type, $prop, $value ),
         };
 
@@ -309,11 +312,29 @@ trait Prop_Setters {
      * @return void
      */
     protected function set_json_prop( string $prop, string|array $value, bool $assoc = true ) {
-        \error_log( 'set_json_prop called with value: ' . \print_r( $value, true ) );
         if ( ! \is_array( $value ) ) {
             $value = \json_decode( $value, $assoc );
         }
         $this->set_wc_data_prop( $prop, $value );
+    }
+
+    protected function set_object_prop( string $prop, mixed $value ): void {
+        if ( \is_object( $value ) ) {
+            if ( ! \is_a( $value, XWC_Prop::class ) ) {
+                $this->error( 'invalid_object', 'Object must be an instance of XWC_Prop.' );
+            }
+
+            $this->set_wc_data_prop( $prop, $value );
+            return;
+        }
+
+        $value = null !== match ( true ) {
+            \json_decode( $value )                 => \json_decode( $value, true ),
+            \is_a( $value, XWC_Prop::class, true ) => array( 'class' => $value ),
+            default                                => array(),
+        };
+
+        $this->set_wc_data_prop( $prop, XWC_Prop::from_json( $value ) );
     }
 
     /**

@@ -2,6 +2,8 @@
 
 namespace XWC\Data\Model;
 
+use JsonSerializable;
+use Stringable;
 use XWC_Data;
 
 /**
@@ -138,7 +140,7 @@ trait Prop_Getters {
      *
      * @param  string $prop Name of prop to get type for.
      * @return array{
-     *   0: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other',
+     *   0: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'other'|string|class-string,
      *   1: array<int,mixed>
      * } | array{0: 'enum', 1: array{0: class-string<BackedEnum>}}
      */
@@ -148,7 +150,7 @@ trait Prop_Getters {
         /**
          * Variable narrowing for prop types.
          *
-         * @var 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other' $type
+         * @var 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'other'|string|class-string $type
          */
         $type = \array_shift( $types );
 
@@ -222,6 +224,7 @@ trait Prop_Getters {
             'json_obj'      => $this->get_json_prop( $value, \JSON_FORCE_OBJECT ),
             'binary'        => $this->get_binary_prop( $value ),
             'base64_string' => $this->get_base64_string_prop( $value ),
+            'object'        => $this->get_object_prop( $value, $prop ),
             default         => $this->get_unknown_prop( $type, $prop, $value ),
         };
     }
@@ -317,6 +320,27 @@ trait Prop_Getters {
 
     protected function get_base64_string_prop( ?string $value ): string {
         return ! $this->is_base64_string( $value ) ? \base64_encode( $value ) : $value;
+    }
+
+    protected function get_object_prop( mixed $value, string $prop ): string {
+        $iof = static fn( $t ) => $t instanceof JsonSerializable || $t instanceof Stringable;
+
+        if ( $iof( $value ) ) {
+            $value = $this->get_json_prop( $value, \JSON_FORCE_OBJECT | \JSON_UNESCAPED_UNICODE );
+        }
+
+        if ( \is_string( $value ) && \class_exists( $value ) ) {
+            $value = '';
+        }
+
+        $value = $value ?: \wp_json_encode(
+            array(
+                'class' => $this->default_data[ $prop ],
+                'data'  => array(),
+            ),
+        );
+
+        return $value;
     }
 
     protected function get_unknown_prop( string $type, string $prop, mixed $value ): mixed {

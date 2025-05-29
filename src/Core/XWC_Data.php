@@ -91,6 +91,14 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
             : $this->set_prop( $prop, $args[0] );
     }
 
+    public function jsonSerialize(): mixed {
+        $data = $this->get_data();
+
+        unset( $data['meta_data'], $data['stats'] );
+
+        return $data;
+    }
+
     /**
      * Load the data for this object from the database.
      *
@@ -133,6 +141,7 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
             : array( 'created', null );
 
         return $this
+            ->maybe_set_object()
             ->maybe_set_date( ...$args )
             ->save_wc_data();
     }
@@ -326,6 +335,29 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
         }
 
         return $parent_check;
+    }
+
+    protected function maybe_set_object(): static {
+        if ( ! in_array( 'object', $this->get_prop_types(), true ) ) {
+            return $this;
+        }
+
+        $changed = array_diff(
+            (array) $this->get_prop_by_type( 'object' ),
+            array_keys( $this->get_changes() ),
+        );
+
+        foreach ( $changed as $prop ) {
+            $obj = $this->get_prop( $prop );
+
+            if ( ! $obj?->changed() ) {
+                continue;
+            }
+
+            $this->set_prop( $prop, $obj );
+        }
+
+        return $this;
     }
 
     /**
