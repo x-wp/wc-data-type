@@ -47,6 +47,7 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
      * Data store object.
      *
      * @var XWC_Data_Store_XT<static>
+     * @phpstan-ignore property.phpDocType
      */
     protected $data_store;
 
@@ -72,6 +73,25 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
             ->load_object_args()
             ->load_data( $data )
             ->do_actions( $data );
+    }
+
+    /**
+     * Get the debug information for this object.
+     *
+     * @return array<string,mixed>
+     */
+    public function __debugInfo() {
+        return array(
+            'changes'   => $this->changes,
+            'data'      => $this->data,
+            'id'        => $this->get_id(),
+            'meta_data' => wp_list_pluck(
+                $this->get_meta_data(),
+                'value',
+                'key',
+            ),
+            'read'      => $this->get_object_read(),
+        );
     }
 
     /**
@@ -135,6 +155,25 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
         return (bool) $this->core_read;
     }
 
+    /**
+     * Take the changes made to the meta props and apply them to the data.
+     *
+     * @return void
+     */
+    public function apply_changes() {
+        $meta_changes = array_intersect(
+            array_keys( $this->changes ),
+            array_keys( array_diff_key( $this->data, $this->core_data, $this->extra_data, $this->tax_data ) ),
+        );
+
+        foreach ( $meta_changes as $meta_prop ) {
+            $this->data[ $meta_prop ] = $this->changes[ $meta_prop ];
+            unset( $this->changes[ $meta_prop ] );
+        }
+
+        parent::apply_changes();
+    }
+
     public function save() {
         $args = $this->get_id() > 0
             ? array( 'updated', 'changes' )
@@ -160,7 +199,7 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
         $type   = $m[1] ?? '';
         $prop   = $m[2] ?? '';
 
-        if ( ! $method || ! $type || ! $prop || ( 'set' === $type && ! isset( $args[0] ) ) ) {
+        if ( ! $method || ! $type || ! $prop || ( 'set' === $type && count( $args ) < 1 ) ) {
             $this->error( 'bmc', \sprintf( 'BMC: %s, %s', static::class, $name ) );
         }
 
@@ -338,26 +377,36 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
     }
 
     protected function maybe_set_object(): static {
-        if ( ! in_array( 'object', $this->get_prop_types(), true ) ) {
+        if ( ! $this->has_prop_type( 'object' ) ) {
             return $this;
         }
 
         $changed = array_diff(
             (array) $this->get_prop_by_type( 'object' ),
-            array_keys( $this->get_changes() ),
+            array_keys( parent::get_changes() ),
         );
 
         foreach ( $changed as $prop ) {
-            $obj = $this->get_prop( $prop );
+            $obj = $this->{"get_{$prop}"}();
 
-            if ( ! $obj?->changed() ) {
+            if ( ! ( $obj?->changed() ?? false ) ) {
                 continue;
             }
 
-            $this->set_prop( $prop, $obj );
+            $this->changes[ $prop ] = $obj;
         }
 
         return $this;
+    }
+
+    protected function has_prop_type( string $type ): bool {
+        foreach ( $this->get_prop_types() as $t ) {
+            if ( $t === $type || str_starts_with( $t, $type . '|' ) ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

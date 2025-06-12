@@ -21,7 +21,8 @@
     "symfony/polyfill-php81": "^1.30",
     "x-wp/helper-classes": "^1",
     "x-wp/helper-functions": "^1",
-    "x-wp/di-implementation": "^1"
+    "x-wp/di-implementation": "^1",
+    "symfony/polyfill-php83": "^1.32"
   },
   "require-dev": {
     "x-wp/di": "^1.0 || ^2.0",

@@ -23,7 +23,16 @@ class XWC_Prop implements ArrayAccess, JsonSerializable {
      *
      * @var string
      */
-    protected string $hash = '';
+    protected string $hash;
+
+    /**
+     * Did we read the object?
+     *
+     * @var bool
+     */
+    protected bool $read = false;
+
+    protected bool $changed = false;
 
     /**
      * Gets the default JSON representation of the object.
@@ -31,82 +40,55 @@ class XWC_Prop implements ArrayAccess, JsonSerializable {
      * @return static
      */
     public static function default(): static {
+        // @phpstan-ignore new.static
         return new static();
-    }
-
-    /**
-     * Creates a new instance from JSON data.
-     *
-     * @template Tp of XWC_Prop<string,mixed>
-     * @param  null|false|array{class?: class-string<Tp>, data?: array<TKey,TValue>, hash?: string} $data The JSON data.
-     * @return Tp
-     */
-    public static function from_json( null|bool|array $data ): XWC_Prop {
-        if ( ! is_array( $data ) || ! $data ) {
-            $data = array(
-                'data' => array(),
-                'hash' => '',
-            );
-        }
-        $data['class'] ??= static::class;
-
-        $cname = is_a( $data['class'], static::class, true ) ? $data['class'] : static::class;
-
-        return new $data['class']( $data );
     }
 
     /**
      * Constructor.
      *
-     * @param array{data?: array<TKey,TValue>, hash?: string} $args Data and hash.
+     * @param array<TKey,TValue> $data Data and hash.
      * }
      */
-    public function __construct( array $args = array() ) {
-        if ( isset( $args['data'] ) ) {
-            $this->sort( $args['data'] );
-        }
+    public function __construct( array $data = array() ) {
+        $this->data = $this->default_data();
+        $this->hash = $this->hash_data();
 
-        $this->data = $args['data'] ?? array();
-        $this->hash = $args['hash'] ?? $this->hash_data();
+        $this->load_data( $data );
     }
 
     /**
      * Serializes the object to an array.
      *
-     * @return array{data: array<TKey,TValue>, hash: string} Data and hash.
+     * @return array<TKey,TValue>
      */
     public function __serialize(): array {
-        return array(
-            'data' => $this->data,
-            'hash' => $this->hash_data(),
-        );
+        return $this->get_data();
     }
 
     /**
      * Unserializes the object from an array.
      *
-     * @param array{data?: array<TKey,TValue>, hash?: string} $data Data and hash.
+     * @param array<TKey,TValue> $data Data to unserialize.
      */
     public function __unserialize( array $data ): void {
-        $this->data = $data['data'] ?? array();
-        $this->hash = $data['hash'] ?? $this->hash_data();
+        $this->load_data( $data );
     }
 
     /**
      * Return data needed for JSON serialization.
      *
-     * @return array{
-     *   class:class-string<static>,
-     *   data: array<TKey,TValue>,
-     *   hash: string,
-     * }
+     * @return ?array<TKey,TValue>
      */
     public function jsonSerialize(): mixed {
-        return array(
-            'class' => static::class,
-            'data'  => $this->get_data(),
-            'hash'  => $this->hash_data(),
-        );
+        $data = $this->get_data();
+        $defl = $this->default_data();
+
+        $this->sort( $data );
+        $this->sort( $defl );
+        return $data === $defl
+            ? null
+            : $data;
     }
 
     /**
@@ -117,7 +99,13 @@ class XWC_Prop implements ArrayAccess, JsonSerializable {
      * @return static
      */
     public function set( string $offset, mixed $value ): static {
+        $old = $this->get( $offset );
+
         $this->data[ $offset ] = $value;
+
+        if ( $this->get_read() && $old !== $value ) {
+            $this->changed = true;
+        }
 
         return $this;
     }
@@ -129,11 +117,44 @@ class XWC_Prop implements ArrayAccess, JsonSerializable {
      * @return static
      */
     public function set_data( array $data ): static {
-        $this->sort( $data );
-
+        $old        = $this->data;
         $this->data = $data;
 
+        if ( $this->get_read() && $old !== $data ) {
+            $this->changed = true;
+        }
+
         return $this;
+    }
+
+    /**
+     * Mark the object as read.
+     *
+     * @param  bool   $read Whether the object has been read.
+     * @return static
+     */
+    public function set_read( bool $read = true ): static {
+        $this->read = $read;
+
+        return $this;
+    }
+
+    /**
+     * Sets the data for the property.
+     *
+     * @template TData of XWC_Prop
+     *
+     * @param  TData|array<TKey,TValue> $data The data to set.
+     * @return ($data is array ? static<TKey,TValue> : TData<TKey,TValue>)
+     */
+    public function with_data( array|XWC_Prop $data ): XWC_Prop {
+        if ( is_array( $data ) ) {
+            return $this->set_data( $data );
+        }
+
+        $cname = $data::class;
+
+        return new $cname( $data->get_data() );
     }
 
     /**
@@ -146,12 +167,39 @@ class XWC_Prop implements ArrayAccess, JsonSerializable {
         return $this->data[ $offset ] ?? null;
     }
 
+    /**
+     * Gets the data array.
+     *
+     * @return array<TKey,TValue>
+     */
     public function get_data(): array {
         return $this->data;
     }
 
+    /**
+     * Gets the hash of the data.
+     *
+     * @return ?string
+     */
+    public function get_hash(): ?string {
+        return $this->hash ?? null;
+    }
+
+    /**
+     * Checks if the object has been read.
+     *
+     * @return bool
+     */
+    public function get_read(): bool {
+        return $this->read;
+    }
+
     public function changed(): bool {
-        return array() !== $this->data && $this->hash !== $this->hash_data();
+        if ( ! $this->get_read() ) {
+            return false;
+        }
+
+        return $this->changed;
     }
 
     /**
@@ -203,15 +251,53 @@ class XWC_Prop implements ArrayAccess, JsonSerializable {
         throw new \BadMethodCallException( 'Do not use this method directly. Use the setter method instead.' );
     }
 
-    private function hash_data(): string {
-        $data = $this->data;
+    /**
+     * Sets the hash of the data.
+     *
+     * @param  string $hash The hash to set.
+     * @return static
+     */
+    protected function set_hash( string $hash ): static {
+        $this->hash = $hash;
 
-        ksort( $data );
+        return $this;
+    }
+
+    /**
+     * Returns the default data for this property.
+     *
+     * @return array<TKey,TValue>
+     */
+    protected function default_data(): array {
+        return array();
+    }
+
+    /**
+     * Hashes the data.
+     *
+     * This method sorts the data and then hashes it using md5.
+     *
+     * @param  null|array<TKey,TValue> $data Optional data to hash. If not provided, uses the current data.
+     * @return string The hash of the data.
+     */
+    protected function hash_data( ?array $data = null ): string {
+        $data ??= $this->data;
+
+        $this->sort( $data );
 
         return hash( 'md5', (string) wp_json_encode( $data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ) );
     }
 
-    private function sort( array &$arr ): void {
+    /**
+     * Sorts the data array recursively.
+     *
+     * This method sorts the array in place, preserving the keys and ensuring
+     * that nested arrays are also sorted.
+     *
+     * @param  array<mixed> $arr The array to sort.
+     * @return void
+     */
+    protected function sort( array &$arr ): void {
         array_is_list( $arr )
             ? sort( $arr, SORT_NATURAL | SORT_FLAG_CASE )
             : ksort( $arr, SORT_NATURAL | SORT_FLAG_CASE );
@@ -223,5 +309,23 @@ class XWC_Prop implements ArrayAccess, JsonSerializable {
 
             $this->sort( $value );
         }
+    }
+
+    /**
+     * Load the data.
+     *
+     * @param array<TKey,TValue> $data The data to load.
+     * }
+     */
+    protected function load_data( array $data = array() ): void {
+        if ( ! $data ) {
+            $this->set_read( true );
+            return;
+        }
+
+        $this
+            ->set_data( $data )
+            ->set_hash( $this->hash_data() )
+            ->set_read( true );
     }
 }

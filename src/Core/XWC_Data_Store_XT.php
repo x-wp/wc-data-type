@@ -52,7 +52,7 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
      *   core_data: array<string,mixed>,
      *   data: array<string,mixed>,
      *   tax_data: array<string,mixed>,
-     *   prop_types: array<string,'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other'>,
+     *   prop_types: array<string,'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array_set'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other'>,
      *   unique_data: array<string>,
      *   required_data: array<string>,
      * }
@@ -116,7 +116,7 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
      *   core_data: array<string,mixed>,
      *   data: array<string,mixed>,
      *   tax_data: array<string,mixed>,
-     *   prop_types: array<string,'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other'>,
+     *   prop_types: array<string,'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array_set'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other'>,
      *   unique_data: array<string>,
      *   required_data: array<string>,
      * }

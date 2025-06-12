@@ -24,7 +24,7 @@ trait Prop_Setters {
      *
      * @param  string $prop Name of prop to get type for.
      * @return array{
-     *   0: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'other'|string|class-string,
+     *   0: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array_set'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'other'|string|class-string,
      *   1: array<int,mixed>
      * } | array{0: 'enum', 1: array{0: class-string<BackedEnum>}}
      */
@@ -105,6 +105,7 @@ trait Prop_Setters {
             'term_array'    => $this->set_array_term_prop( $prop, $value, ...$sub ),
             'array_assoc'   => $this->set_assoc_arr_prop( $prop, $value ),
             'array'         => $this->set_normal_arr_prop( $prop, $value ),
+            'array_set'     => $this->set_unique_arr_prop( $prop, $value ),
             'binary'        => $this->set_binary_prop( $prop, $value ),
             'base64_string' => $this->set_base64_string_prop( $prop, $value ),
             'json_obj'      => $this->set_json_prop( $prop, $value, false ),
@@ -113,7 +114,7 @@ trait Prop_Setters {
             'float'         => $this->set_float_prop( $prop, $value ),
             'slug'          => $this->set_slug_prop( $prop, $value ),
             'string'        => $this->set_wc_data_prop( $prop, $value ),
-            'object'        => $this->set_object_prop( $prop, $value ),
+            'object'        => $this->set_object_prop( $prop, $value, ...$sub ),
             default         => $this->set_unknown_prop( $type, $prop, $value ),
         };
 
@@ -259,6 +260,19 @@ trait Prop_Setters {
     }
 
     /**
+     * Set an array prop with unique values
+     *
+     * @param  string $prop  Property name.
+     * @param  mixed  $value Property value.
+     * @return void
+     */
+    protected function set_unique_arr_prop( string $prop, $value ) {
+        $value = \array_values( \array_unique( \wc_string_to_array( $value ) ) );
+
+        $this->set_wc_data_prop( $prop, $value );
+    }
+
+    /**
      * Set an associative array prop
      *
      * @param  string $prop  Property name.
@@ -318,23 +332,33 @@ trait Prop_Setters {
         $this->set_wc_data_prop( $prop, $value );
     }
 
-    protected function set_object_prop( string $prop, mixed $value ): void {
-        if ( \is_object( $value ) ) {
-            if ( ! \is_a( $value, XWC_Prop::class ) ) {
-                $this->error( 'invalid_object', 'Object must be an instance of XWC_Prop.' );
-            }
-
-            $this->set_wc_data_prop( $prop, $value );
-            return;
-        }
-
-        $value = null !== match ( true ) {
-            \json_decode( $value )                 => \json_decode( $value, true ),
-            \is_a( $value, XWC_Prop::class, true ) => array( 'class' => $value ),
-            default                                => array(),
+    /**
+     * Set an object prop
+     *
+     * @template TObj of XWC_Prop<string,mixed>
+     *
+     * @param  string $prop
+     * @param  mixed  $value
+     * @param  class-string<TObj> $cname Class name to parse the value into.
+     */
+    protected function set_object_prop( string $prop, mixed $value, string $cname = XWC_Prop::class ): void {
+        $data = match ( true ) {
+            \is_array( $value )              => $value,
+            \is_string( $value )             => \json_decode( $value, true ) ?? array(),
+            \is_a( $value, XWC_Prop::class ) => $value,
+            default                          => array(),
         };
 
-        $this->set_wc_data_prop( $prop, XWC_Prop::from_json( $value ) );
+        /**
+         * If the object is not read, we need to get the prop from the data store.
+         *
+         * @var TObj $obj
+         */
+        $obj = $this->get_object_read()
+            ? $this->get_prop( $prop )?->with_data( $data ) ?? new $cname( $data )
+            : new $cname( $data );
+
+        $this->set_wc_data_prop( $prop, $obj );
     }
 
     /**
