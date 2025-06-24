@@ -115,8 +115,13 @@ final class Entity_Manager {
      * @return array<Model<TData,XWC_Data_Store_XT<TData>,XWC_Object_Factory<TData>,XWC_Meta_Store<TData>>>
      */
     protected function get_models( string $target ): array {
-        $defs  = array();
+        /**
+         * Get the inheritance chain for the target class.
+         *
+         * @var array<class-string<TData>> $chain
+         */
         $chain = Reflection::get_inheritance_chain( $target, true );
+        $defs  = array();
 
         foreach ( $chain as $classname ) {
             $defs[] = Reflection::get_decorator( $classname, Model::class )?->set_model( $classname );

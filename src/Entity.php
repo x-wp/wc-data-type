@@ -88,6 +88,13 @@ class Entity {
     );
 
     /**
+     * Properties to be set.
+     *
+     * @var array<int,string>
+     */
+    private static array $props;
+
+    /**
      * Object factories.
      *
      * @var array<string,TFact>
@@ -140,7 +147,7 @@ class Entity {
      *
      * @var array<string,string|array{
      *   name?: string,
-     *   type: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array_set'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'other'|string|class-string,
+     *   type: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other',
      *   default: mixed,
      *   unique?: bool,
      *   def_cb?: callable(): mixed,
@@ -155,7 +162,7 @@ class Entity {
      *
      * @var array<string,array{
      *   name?: string,
-     *   type: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array_set'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'other'|string|class-string,
+     *   type: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other',
      *   default: mixed,
      *   unique?: bool,
      *   required?: bool,
@@ -186,22 +193,22 @@ class Entity {
     protected ContainerInterface $ctr;
 
     /**
+     * Default values for properties.
+     *
+     * @var array<string,mixed>
+     */
+    private array $defaults = array(
+        'meta_table' => '',
+    );
+
+    /**
      * Constructor.
      *
      * @param  Model<TData,TDstr,TFact,TMeta> ...$defs Model definitions.
      */
-    public function __construct(
-        Model ...$defs,
-    ) {
-        $vars = \array_keys( \get_class_vars( $this::class ) );
-        $vars = \array_diff(
-            $vars,
-            array( 'args', 'factories', 'stores', 'hooked', 'defaults', 'ctr', 'container' ),
-        );
-
-        foreach ( $vars as $var ) {
-
-            $this->$var = $this->set_prop( $var, $defs );
+    public function __construct( Model ...$defs ) {
+        foreach ( $this->get_props() as $prop ) {
+            $this->$prop = $this->set_prop( $prop, $defs );
         }
 
         static::$stores[ $this->name ] = null;
@@ -262,6 +269,10 @@ class Entity {
     protected function set_prop( string $prop, array $defs ): mixed {
         $defined = \wp_list_pluck( \wp_list_filter( $defs, array( $prop => null ), 'NOT' ), $prop );
 
+        if ( ! \count( $defined ) ) {
+            return $this->defaults[ $prop ] ?? null;
+        }
+
         if ( 1 === \count( $defined ) ) {
             return \current( $defined );
         }
@@ -272,9 +283,9 @@ class Entity {
             return \array_merge( $base, ...$defined );
         }
 
-        $final = \end( $defined );
+        $final = \count( $defined ) ? \end( $defined ) : $base;
 
-        return $final ? $final : $base;
+        return $final ?? $this->defaults[ $prop ] ?? null;
     }
 
     /**
@@ -427,6 +438,18 @@ class Entity {
      */
     protected function get_repo(): XWC_Data_Store_XT {
         return $this->get_data_store();
+    }
+
+    /**
+     * Get the properties of the entity.
+     *
+     * @return array<int,string>
+     */
+    private function get_props(): array {
+        return self::$props ??= \array_diff(
+            \array_keys( \get_class_vars( $this::class ) ),
+            array( 'props', 'defaults', 'args', 'factories', 'stores', 'hooked', 'defaults', 'ctr', 'container' ),
+        );
     }
 
     /**
