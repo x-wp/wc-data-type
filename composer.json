@@ -42,7 +42,8 @@
       "XWC\\Data\\": "src/"
     },
     "classmap": [
-      "src/Core/"
+      "src/Core/",
+      "src/Interfaces/"
     ],
     "files": [
       "lib/bootstrap.php",
