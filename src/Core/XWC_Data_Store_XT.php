@@ -52,7 +52,7 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
      *   core_data: array<string,mixed>,
      *   data: array<string,mixed>,
      *   tax_data: array<string,mixed>,
-     *   prop_types: array<string,'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other'>,
+     *   prop_types: array<string,'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array_set'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other'>,
      *   unique_data: array<string>,
      *   required_data: array<string>,
      * }
@@ -116,7 +116,7 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
      *   core_data: array<string,mixed>,
      *   data: array<string,mixed>,
      *   tax_data: array<string,mixed>,
-     *   prop_types: array<string,'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other'>,
+     *   prop_types: array<string,'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array_set'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other'>,
      *   unique_data: array<string>,
      *   required_data: array<string>,
      * }
@@ -365,14 +365,14 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
     public function unique_entity_slug( string $slug, string $prop, int $obj_id ): string {
         global $wpdb;
 
-        $prop = $this->get_cols_to_props()[ $prop ] ?? $prop;
+        $col = $this->get_cols_to_props()[ $prop ] ?? $prop;
 
         $check = $wpdb->get_var(
             $wpdb->prepare(
                 'SELECT %i FROM %i WHERE %i = %s AND %i != %d LIMIT 1',
-                $prop,
+                $col,
                 $this->get_table(),
-                $prop,
+                $col,
                 $slug,
                 $this->get_id_field(),
                 $obj_id,
@@ -390,7 +390,8 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
             ? \preg_replace( '/-(\d+)$/', "-$suffix", $slug )
             : "{$slug}-1";
 
-        return $this->unique_entity_slug( $slug, $prop, $obj_id );
+        // Pass the already-remapped column name to avoid double-remapping on recursion.
+        return $this->unique_entity_slug( (string) $slug, $col, $obj_id );
     }
 
     /**
@@ -467,8 +468,9 @@ class XWC_Data_Store_XT extends WC_Data_Store_WP implements WC_Object_Data_Store
 
         $data_row = $wpdb->get_row(
             $wpdb->prepare(
-                "SELECT * FROM %i WHERE {$this->get_id_field()} = %d",
+                'SELECT * FROM %i WHERE %i = %d',
                 $this->get_table(),
+                $this->get_id_field(),
                 $id,
             ),
             ARRAY_A,

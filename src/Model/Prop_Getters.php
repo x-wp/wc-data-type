@@ -2,6 +2,8 @@
 
 namespace XWC\Data\Model;
 
+use JsonSerializable;
+use Stringable;
 use XWC_Data;
 
 /**
@@ -29,7 +31,7 @@ trait Prop_Getters {
     /**
      * Array linking props to their types.
      *
-     * @var array<string,'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other'>
+     * @var array<string,'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array_set'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other'>
      */
     protected array $prop_types = array();
 
@@ -48,10 +50,12 @@ trait Prop_Getters {
     protected array $required_data = array();
 
     public function get_prop_group( string $prop ): string {
+        $meta_props = \array_diff_key( $this->data, $this->core_data, $this->extra_data, $this->tax_data );
+
         return match ( true ) {
             isset( $this->core_data[ $prop ] )  => 'core',
             isset( $this->extra_data[ $prop ] ) => 'extra',
-            isset( $this->meta_data[ $prop ] )  => 'meta',
+            isset( $meta_props[ $prop ] )        => 'meta',
             default => 'none',
         };
     }
@@ -103,7 +107,7 @@ trait Prop_Getters {
      */
     public function get_core_changes(): array {
         $changed = array();
-        $props   = \array_intersect( $this->get_core_keys(), \array_keys( $this->changes ) );
+        $props   = \array_intersect( $this->get_core_keys(), \array_keys( $this->get_changes() ) );
 
         if ( 0 === \count( $props ) ) {
             return $changed;
@@ -134,11 +138,24 @@ trait Prop_Getters {
     }
 
     /**
+     * Get all changes for this object.
+     *
+     * This includes core data, extra data, and meta data.
+     *
+     * @return array<string,mixed>
+     */
+    public function get_changes() {
+        return $this
+            ->maybe_set_object()
+            ->get_wc_data_changes();
+    }
+
+    /**
      * Get the type of a prop.
      *
      * @param  string $prop Name of prop to get type for.
      * @return array{
-     *   0: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other',
+     *   0: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array_set'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'other'|string|class-string,
      *   1: array<int,mixed>
      * } | array{0: 'enum', 1: array{0: class-string<BackedEnum>}}
      */
@@ -148,7 +165,7 @@ trait Prop_Getters {
         /**
          * Variable narrowing for prop types.
          *
-         * @var 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other' $type
+         * @var 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array_set'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'other'|string|class-string $type
          */
         $type = \array_shift( $types );
 
@@ -177,7 +194,11 @@ trait Prop_Getters {
      * @return ($type is 'date_created' ? null|string : ($type is 'date_updated' ? null|string : null|string|array<string>))
      */
     protected function get_prop_by_type( string $type ): null|string|array {
-        $types = \array_filter( $this->get_prop_types(), static fn( $t ) => $t === $type );
+        $types = \array_filter(
+            $this->get_prop_types(),
+            fn( $t ) => $this->filter_prop( $t, $type ),
+        );
+
         $types = \array_keys( $types );
 
         return match ( \count( $types ) ) {
@@ -215,6 +236,7 @@ trait Prop_Getters {
             'bool_int'      => $this->get_bool_prop( $value, 'int' ),
             'array_assoc'   => $this->get_array_prop( $value, 'assoc' ),
             'array'         => $this->get_array_prop( $value, 'normal' ),
+            'array_set'     => $this->get_array_prop( $value, 'set' ),
             'term_single'   => $this->get_term_prop( $value, ...$sub ),
             'term_array'    => $this->get_term_prop( $value, ...$sub ),
             'enum'          => $this->get_enum_prop( $value ),
@@ -222,8 +244,21 @@ trait Prop_Getters {
             'json_obj'      => $this->get_json_prop( $value, \JSON_FORCE_OBJECT ),
             'binary'        => $this->get_binary_prop( $value ),
             'base64_string' => $this->get_base64_string_prop( $value ),
+            'object'        => $this->get_object_prop( $value, ...$sub ),
             default         => $this->get_unknown_prop( $type, $prop, $value ),
         };
+    }
+
+    /**
+     * Get WC data changes.
+     *
+     * This is a wrapper for the parent method to ensure that the WC_Data
+     * changes are returned in the correct format.
+     *
+     * @return array<string,mixed>
+     */
+    protected function get_wc_data_changes(): array {
+        return parent::get_changes();
     }
 
     protected function get_wc_data_prop( string $prop, string $context = 'view' ): mixed {
@@ -235,7 +270,7 @@ trait Prop_Getters {
             return null;
         }
 
-        return \gmdate( 'Y-m-d H:i:s', $value->getOffsetTimestamp() );
+        return \gmdate( 'Y-m-d H:i:s', $value->getTimestamp() );
     }
 
     /**
@@ -256,7 +291,7 @@ trait Prop_Getters {
      * Get array prop value.
      *
      * @param  mixed            $value  Value to convert to a string.
-     * @param  'assoc'|'normal' $format Format of the array.
+     * @param  'assoc'|'normal'|'set' $format Format of the array.
      * @return string
      */
     protected function get_array_prop( mixed $value, string $format = 'assoc' ): string {
@@ -264,6 +299,7 @@ trait Prop_Getters {
             // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize
             'assoc'  => \serialize( $value ),
             'normal' => \implode( ',', $value ),
+            'set' => \implode( ',', \array_unique( (array) $value ) ),
         };
     }
 
@@ -287,11 +323,11 @@ trait Prop_Getters {
     /**
      * Get enum prop value.
      *
-     * @param  \BackedEnum $enum_val Enum value.
-     * @return string|int
+     * @param  \BackedEnum|null $enum_val Enum value.
+     * @return null|string|int
      */
-    protected function get_enum_prop( $enum_val ): string|int {
-        return $enum_val->value;
+    protected function get_enum_prop( $enum_val ): null|string|int {
+        return $enum_val?->value ?? null;
     }
 
     /**
@@ -312,11 +348,43 @@ trait Prop_Getters {
      * @return string
      */
     protected function get_binary_prop( mixed $value ): string {
-        return ! $this->is_binary_string( $value ) ? \hex2bin( $value ) : $value;
+        if ( $this->is_binary_string( $value ) ) {
+            return $value;
+        }
+
+        $decoded = \hex2bin( (string) $value );
+
+        return false !== $decoded ? $decoded : (string) $value;
     }
 
-    protected function get_base64_string_prop( ?string $value ): string {
+    protected function get_base64_string_prop( ?string $value ): ?string {
+        if ( null === $value ) {
+            return null;
+        }
+
         return ! $this->is_base64_string( $value ) ? \base64_encode( $value ) : $value;
+    }
+
+    /**
+     * Get an object prop value.
+     *
+     * This is used for objects that implement JsonSerializable or Stringable.
+     *
+     * @param  mixed  $value Value to convert to a string.
+     * @param  string $cname Class name of the prop, defaults to XWC_Prop.
+     * @return ?string
+     */
+    protected function get_object_prop( mixed $value, string $cname = \XWC_Prop::class ): ?string {
+        $iof = static fn( $t ) => $t instanceof JsonSerializable || $t instanceof Stringable;
+        $enc = JSON_UNESCAPED_UNICODE;
+
+        return match ( true ) {
+            $iof( $value )                   => $this->get_json_prop( $value, $enc ),
+            $value === $cname                => $this->get_json_prop( new $cname(), $enc ),
+            \class_exists( (string) $value ) => null,
+            '' === (string) $value           => null,
+            default                          => null,
+        };
     }
 
     protected function get_unknown_prop( string $type, string $prop, mixed $value ): mixed {
@@ -335,5 +403,11 @@ trait Prop_Getters {
          * @since 0.2
          */
         return \apply_filters( "xwc_data_get_{$type}_prop", $value, $prop );
+    }
+
+    private function filter_prop( string $type, string $find ): bool {
+        $regex = '/^' . \preg_quote( $find, '/' ) . '(?:$|\|.+$)/';
+
+        return 1 === \preg_match( $regex, $type );
     }
 }

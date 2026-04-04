@@ -14,8 +14,14 @@
  * @return T
  */
 function xwc_ds( string $name, string $cn = XWC_Data_Store_XT::class ): XWC_Data_Store_XT {
+    $entity = xwc_get_entity( $name );
+
+    if ( null === $entity ) {
+        throw new \RuntimeException( \esc_html( "Entity '{$name}' is not registered." ) );
+    }
+
     // @phpstan-ignore return.type
-    return xwc_get_entity( $name )->repo;
+    return $entity->repo;
 }
 
 /**
@@ -35,7 +41,13 @@ function xwc_data_store( string $name ): WC_Data_Store {
  * @return XWC_Object_Factory<XWC_Data>
  */
 function xwc_get_object_factory( string $name ): XWC_Object_Factory {
-    return xwc_get_entity( $name )->factory;
+    $entity = xwc_get_entity( $name );
+
+    if ( null === $entity ) {
+        throw new \RuntimeException( \esc_html( "Entity '{$name}' is not registered." ) );
+    }
+
+    return $entity->factory;
 }
 
 /**
@@ -70,18 +82,19 @@ function xwc_get_object( mixed $id, string $name, int|bool|null $def = false ): 
         return $def;
     }
 
-    return xwc_get_object_factory( $name )->{"get_$name"}( $id ) ?: $def;
+    // @phpstan-ignore return.type
+    return xwc_get_object_factory( $name )->get_object( $id ) ?: $def;
 }
 
 /**
  * Get the class name of a data object by ID and type.
  *
  * @param  int    $id   Object ID.
- * @param  string $name Object type.
+ * @param  string $type Object type.
  * @return class-string<XWC_Data>
  */
-function xwc_get_object_classname( int $id, string $name ): string {
-    return xwc_get_object_factory( $name )->{"get_{$name}_classname"}( $id );
+function xwc_get_object_classname( int $id, string $type ): string {
+    return xwc_get_object_factory( $type )->get_classname( $id ) ?: XWC_Data::class;
 }
 
 /**
@@ -92,9 +105,7 @@ function xwc_get_object_classname( int $id, string $name ): string {
  * @return XWC_Data
  */
 function xwc_get_object_instance( int $id, string $type ): XWC_Data {
-    $classname = xwc_get_object_classname( $id, $type );
-
-    return new $classname( $id );
+    return xwc_get_object_factory( $type )->make_object( $id );
 }
 
 /**

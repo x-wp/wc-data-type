@@ -88,6 +88,13 @@ class Entity {
     );
 
     /**
+     * Properties to be set.
+     *
+     * @var array<int,string>
+     */
+    private static array $props;
+
+    /**
      * Object factories.
      *
      * @var array<string,TFact>
@@ -133,7 +140,7 @@ class Entity {
      */
     protected string $container;
 
-    protected string $factory;
+    protected ?string $factory;
 
     /**
      * Core properties.
@@ -186,25 +193,25 @@ class Entity {
     protected ContainerInterface $ctr;
 
     /**
+     * Default values for properties.
+     *
+     * @var array<string,mixed>
+     */
+    private array $defaults = array(
+        'meta_table' => '',
+    );
+
+    /**
      * Constructor.
      *
      * @param  Model<TData,TDstr,TFact,TMeta> ...$defs Model definitions.
      */
-    public function __construct(
-        Model ...$defs,
-    ) {
-        $vars = \array_keys( \get_class_vars( $this::class ) );
-        $vars = \array_diff(
-            $vars,
-            array( 'args', 'factories', 'stores', 'hooked', 'defaults', 'ctr', 'container' ),
-        );
-
-        foreach ( $vars as $var ) {
-
-            $this->$var = $this->set_prop( $var, $defs );
+    public function __construct( Model ...$defs ) {
+        foreach ( $this->get_props() as $prop ) {
+            $this->$prop = $this->set_prop( $prop, $defs );
         }
 
-        static::$stores[ $this->name ] = null;
+        static::$stores[ $this->name ] ??= null; // @phpstan-ignore assign.propertyType
     }
 
     /**
@@ -242,7 +249,7 @@ class Entity {
      * Prime the data store with the entity name.
      *
      * @param  array<string,mixed> $stores Data stores.
-     * @return array<string,null>
+     * @return array<string,mixed>
      */
     public function prime_data_store( array $stores ): array {
         $to_add = \array_keys( static::$stores );
@@ -260,7 +267,19 @@ class Entity {
      * @return mixed
      */
     protected function set_prop( string $prop, array $defs ): mixed {
-        $defined = \wp_list_pluck( \wp_list_filter( $defs, array( $prop => null ), 'NOT' ), $prop );
+        $defined = array();
+
+        foreach ( $defs as $def ) {
+            if ( ! isset( $def->$prop ) ) {
+                continue;
+            }
+
+            $defined[] = $def->$prop;
+        }
+
+        if ( ! \count( $defined ) ) {
+            return $this->defaults[ $prop ] ?? null;
+        }
 
         if ( 1 === \count( $defined ) ) {
             return \current( $defined );
@@ -272,9 +291,7 @@ class Entity {
             return \array_merge( $base, ...$defined );
         }
 
-        $final = \end( $defined );
-
-        return $final ? $final : $base;
+        return \end( $defined );
     }
 
     /**
@@ -292,7 +309,7 @@ class Entity {
      * @return array<string,mixed>
      */
     protected function get_data(): array {
-        return \wp_list_pluck( $this->meta_props, 'default' );
+        return \wp_list_pluck( $this->meta_props ?? array(), 'default' );
     }
 
     /**
@@ -301,7 +318,7 @@ class Entity {
      * @return array<string,mixed>
      */
     protected function get_tax_data(): array {
-        return \wp_list_pluck( $this->tax_props, 'default' );
+        return \wp_list_pluck( $this->tax_props ?? array(), 'default' );
     }
 
     /**
@@ -312,8 +329,8 @@ class Entity {
     protected function get_prop_types(): array {
         return \array_merge(
             \wp_list_pluck( $this->core_props, 'type' ),
-            \wp_list_pluck( $this->meta_props, 'type' ),
-            \wp_list_pluck( $this->tax_props, 'type' ),
+            \wp_list_pluck( $this->meta_props ?? array(), 'type' ),
+            \wp_list_pluck( $this->tax_props ?? array(), 'type' ),
         );
     }
 
@@ -346,7 +363,7 @@ class Entity {
      * @return array<string,string>
      */
     protected function get_meta_to_props(): array {
-        return \array_flip( \wp_list_pluck( $this->meta_props, 'name' ) );
+        return \array_flip( \wp_list_pluck( $this->meta_props ?? array(), 'name' ) );
     }
 
     /**
@@ -364,7 +381,7 @@ class Entity {
      * @return array<string,string>
      */
     protected function get_tax_to_props(): array {
-        return \array_flip( \wp_list_pluck( $this->tax_props, 'taxonomy' ) );
+        return \array_flip( \wp_list_pluck( $this->tax_props ?? array(), 'taxonomy' ) );
     }
 
     /**
@@ -373,7 +390,7 @@ class Entity {
      * @return array<string,string>
      */
     protected function get_tax_fields(): array {
-        return \wp_list_pluck( $this->tax_props, 'field', 'taxonomy' );
+        return \wp_list_pluck( $this->tax_props ?? array(), 'field', 'taxonomy' );
     }
 
     /**
@@ -382,7 +399,14 @@ class Entity {
      * @return TFact
      */
     protected function get_factory(): XWC_Object_Factory {
-        return static::$factories[ $this->name ] ??= $this->factory::instance();
+        /**
+         * Variable override.
+         *
+         * @var null|class-string<TFact> $factory
+         */
+        $factory = $this->factory ?? XWC_Object_Factory::class;
+
+        return static::$factories[ $this->name ] ??= $this->make( $factory )->initialize( $this );
     }
 
     /**
@@ -406,7 +430,7 @@ class Entity {
     }
 
     protected function get_has_meta(): bool {
-        return '' !== $this->meta_table && array() !== $this->meta_props;
+        return '' !== $this->meta_table && ! empty( $this->meta_props );
     }
 
     /**
@@ -430,9 +454,21 @@ class Entity {
     }
 
     /**
+     * Get the properties of the entity.
+     *
+     * @return array<int,string>
+     */
+    private function get_props(): array {
+        return self::$props ??= \array_diff(
+            \array_keys( \get_class_vars( $this::class ) ),
+            array( 'props', 'defaults', 'args', 'factories', 'stores', 'hooked', 'ctr', 'container' ),
+        );
+    }
+
+    /**
      * Make an instance of a class.
      *
-     * @template TObj of TDstr|TMeta
+     * @template TObj of TDstr|TMeta|TFact
      * @param  class-string<TObj> $cname Class name.
      * @return TObj
      */

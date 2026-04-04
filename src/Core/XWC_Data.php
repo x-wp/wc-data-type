@@ -47,6 +47,7 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
      * Data store object.
      *
      * @var XWC_Data_Store_XT<static>
+     * @phpstan-ignore property.phpDocType
      */
     protected $data_store;
 
@@ -75,6 +76,25 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
     }
 
     /**
+     * Get the debug information for this object.
+     *
+     * @return array<string,mixed>
+     */
+    public function __debugInfo() {
+        return array(
+            'changes'   => $this->changes,
+            'data'      => $this->data,
+            'id'        => $this->get_id(),
+            'meta_data' => wp_list_pluck(
+                $this->get_meta_data(),
+                'value',
+                'key',
+            ),
+            'read'      => $this->get_object_read(),
+        );
+    }
+
+    /**
      * Universal prop getter / setter
      *
      * @param  string        $name Method name.
@@ -89,6 +109,36 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
         return 'get' === $type
             ? $this->get_prop( $prop, $args[0] ?? 'view' )
             : $this->set_prop( $prop, $args[0] );
+    }
+
+    /**
+     * Serialize the object.
+     *
+     * @return array{id: int}
+     */
+    public function __serialize(): array {
+        return array( 'id' => $this->get_id() );
+    }
+
+    /**
+     * Unserialize the object.
+     *
+     * @param array{id?: int} $data Data to unserialize.
+     */
+    public function __unserialize( array $data ): void {
+        $this
+            ->load_data_store()
+            ->load_object_args()
+            ->load_data( $data['id'] ?? 0 )
+            ->do_actions( $data['id'] ?? 0 );
+    }
+
+    public function jsonSerialize(): mixed {
+        $data = $this->get_data();
+
+        unset( $data['meta_data'] );
+
+        return $data;
     }
 
     /**
@@ -127,12 +177,32 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
         return (bool) $this->core_read;
     }
 
+    /**
+     * Take the changes made to the meta props and apply them to the data.
+     *
+     * @return void
+     */
+    public function apply_changes() {
+        $meta_changes = array_intersect(
+            array_keys( $this->changes ),
+            array_keys( array_diff_key( $this->data, $this->core_data, $this->extra_data, $this->tax_data ) ),
+        );
+
+        foreach ( $meta_changes as $meta_prop ) {
+            $this->data[ $meta_prop ] = $this->changes[ $meta_prop ];
+            unset( $this->changes[ $meta_prop ] );
+        }
+
+        parent::apply_changes();
+    }
+
     public function save() {
         $args = $this->get_id() > 0
             ? array( 'updated', 'changes' )
             : array( 'created', null );
 
         return $this
+            ->maybe_set_object()
             ->maybe_set_date( ...$args )
             ->save_wc_data();
     }
@@ -142,7 +212,7 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
      *
      * @param  string $name Method name.
      * @param  array<mixed,mixed> $args Method arguments.
-     * @return array{0: string, 1: string, 2: string}}
+     * @return array{0: string, 1: string, 2: string}
      */
     final protected function parse_method_name( string $name, array $args ): array {
         \preg_match( '/^([gs]et)_(.+)$/', $name, $m );
@@ -151,7 +221,7 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
         $type   = $m[1] ?? '';
         $prop   = $m[2] ?? '';
 
-        if ( ! $method || ! $type || ! $prop || ( 'set' === $type && ! isset( $args[0] ) ) ) {
+        if ( ! $method || ! $type || ! $prop || ( 'set' === $type && count( $args ) < 1 ) ) {
             $this->error( 'bmc', \sprintf( 'BMC: %s, %s', static::class, $name ) );
         }
 
@@ -328,6 +398,39 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
         return $parent_check;
     }
 
+    protected function maybe_set_object(): static {
+        if ( ! $this->has_prop_type( 'object' ) ) {
+            return $this;
+        }
+
+        $changed = array_diff(
+            (array) $this->get_prop_by_type( 'object' ),
+            array_keys( parent::get_changes() ),
+        );
+
+        foreach ( $changed as $prop ) {
+            $obj = $this->{"get_{$prop}"}();
+
+            if ( ! ( $obj?->changed() ?? false ) ) {
+                continue;
+            }
+
+            $this->changes[ $prop ] = $obj;
+        }
+
+        return $this;
+    }
+
+    protected function has_prop_type( string $type ): bool {
+        foreach ( $this->get_prop_types() as $t ) {
+            if ( $t === $type || str_starts_with( $t, $type . '|' ) ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Maybe set the created or updated date on save.
      *
@@ -338,7 +441,7 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
     protected function maybe_set_date( string $type, ?string $key = null ): static {
         $prop = $this->get_prop_by_type( "date_{$type}" );
 
-        if ( ! $prop ) {
+        if ( ! $prop || \is_array( $prop ) ) {
             return $this;
         }
 

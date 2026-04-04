@@ -3,9 +3,11 @@
 namespace XWC\Data\Model;
 
 use BackedEnum;
+use WC_Data_Exception;
 use XWC_Data;
 use XWC_Data_Store_XT;
 use XWC_Meta_Store;
+use XWC_Prop;
 
 /**
  * Prop setters trait.
@@ -18,19 +20,29 @@ use XWC_Meta_Store;
  */
 trait Prop_Setters {
     /**
+     * Whether we are currently inside a set_time_prop → parent::set_date_prop recursion.
+     *
+     * Using an instance property instead of a static variable so that concurrent
+     * calls on different props (or different object instances) cannot interfere.
+     *
+     * @var bool
+     */
+    private bool $time_prop_loop = false;
+
+    /**
      * Get the type of a prop.
      *
      * @param  string $prop Name of prop to get type for.
      * @return array{
-     *   0: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other',
+     *   0: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array_set'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'other'|string|class-string,
      *   1: array<int,mixed>
      * } | array{0: 'enum', 1: array{0: class-string<BackedEnum>}}
      */
     abstract protected function get_prop_type( string $prop ): array;
 
-    abstract protected function is_binary_string( string $value ): bool;
+    abstract protected function is_binary_string( ?string $value ): bool;
 
-    abstract protected function is_base64_string( string $value ): bool;
+    abstract protected function is_base64_string( ?string $value ): bool;
 
     /**
      * Set a collection of props in one go, collect any errors, and return the result.
@@ -50,22 +62,15 @@ trait Prop_Setters {
             return $prop_res;
         }
 
-        $save_res = null;
-
         try {
             $save_res = $this->save();
         } catch ( \Throwable $e ) {
-            $save_res = new \WP_Error( 'save_error', $e->getMessage() );
-        } finally {
-            return match ( true ) {
-                0 === $save_res           => new \WP_Error(
-                    'save_error',
-                    'An unknown error occurred while saving.',
-                ),
-                \is_wp_error( $save_res ) => $save_res,
-                default                   => $this,
-            };
+            return new \WP_Error( 'save_error', $e->getMessage() );
         }
+
+        return 0 === $save_res
+            ? new \WP_Error( 'save_error', 'An unknown error occurred while saving.' )
+            : $this;
     }
 
     /**
@@ -93,9 +98,9 @@ trait Prop_Setters {
         [ $type, $sub ] = $this->get_prop_type( $prop );
 
         match ( $type ) {
-            'date_created'  => $this->set_date_prop( $prop, $value ),
-            'date_updated'  => $this->set_date_prop( $prop, $value ),
-            'date'          => $this->set_date_prop( $prop, $value ),
+            'date_created'  => $this->set_time_prop( $prop, $value ),
+            'date_updated'  => $this->set_time_prop( $prop, $value ),
+            'date'          => $this->set_time_prop( $prop, $value ),
             'bool'          => $this->set_bool_prop( $prop, $value ),
             'bool_int'      => $this->set_bool_prop( $prop, $value ),
             'enum'          => $this->set_enum_prop( $prop, $value, ...$sub ),
@@ -103,6 +108,7 @@ trait Prop_Setters {
             'term_array'    => $this->set_array_term_prop( $prop, $value, ...$sub ),
             'array_assoc'   => $this->set_assoc_arr_prop( $prop, $value ),
             'array'         => $this->set_normal_arr_prop( $prop, $value ),
+            'array_set'     => $this->set_unique_arr_prop( $prop, $value ),
             'binary'        => $this->set_binary_prop( $prop, $value ),
             'base64_string' => $this->set_base64_string_prop( $prop, $value ),
             'json_obj'      => $this->set_json_prop( $prop, $value, false ),
@@ -111,6 +117,7 @@ trait Prop_Setters {
             'float'         => $this->set_float_prop( $prop, $value ),
             'slug'          => $this->set_slug_prop( $prop, $value ),
             'string'        => $this->set_wc_data_prop( $prop, $value ),
+            'object'        => $this->set_object_prop( $prop, $value, ...$sub ),
             default         => $this->set_unknown_prop( $type, $prop, $value ),
         };
 
@@ -150,16 +157,17 @@ trait Prop_Setters {
      * @param  mixed  $value Property value.
      * @return void
      */
-    protected function set_date_prop( $prop, $value ) {
-        static $loop;
+    protected function set_time_prop( $prop, $value ) {
+        if ( ! $this->time_prop_loop ) {
+            if ( \is_string( $value ) && \preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/', $value ) ) {
+                $value = \wc_string_to_timestamp( $value );
+            }
 
-        if ( ! $loop ) {
-            $loop = true;
+            $this->time_prop_loop = true;
             parent::set_date_prop( $prop, $value );
+            $this->time_prop_loop = false;
             return;
         }
-
-        $loop = false;
 
         $this->set_wc_data_prop( $prop, $value );
     }
@@ -190,6 +198,11 @@ trait Prop_Setters {
      * @return void
      */
     protected function set_enum_prop( string $prop, mixed $val, null|string|BackedEnum $type = null ) {
+        if ( null === $type ) {
+            $this->set_wc_data_prop( $prop, $val );
+            return;
+        }
+
         if ( $val instanceof $type ) {
             $this->set_wc_data_prop( $prop, $val );
             return;
@@ -256,6 +269,19 @@ trait Prop_Setters {
     }
 
     /**
+     * Set an array prop with unique values
+     *
+     * @param  string $prop  Property name.
+     * @param  mixed  $value Property value.
+     * @return void
+     */
+    protected function set_unique_arr_prop( string $prop, $value ) {
+        $value = \array_values( \array_unique( \wc_string_to_array( $value ) ) );
+
+        $this->set_wc_data_prop( $prop, $value );
+    }
+
+    /**
      * Set an associative array prop
      *
      * @param  string $prop  Property name.
@@ -309,11 +335,39 @@ trait Prop_Setters {
      * @return void
      */
     protected function set_json_prop( string $prop, string|array $value, bool $assoc = true ) {
-        \error_log( 'set_json_prop called with value: ' . \print_r( $value, true ) );
         if ( ! \is_array( $value ) ) {
             $value = \json_decode( $value, $assoc );
         }
         $this->set_wc_data_prop( $prop, $value );
+    }
+
+    /**
+     * Set an object prop
+     *
+     * @template TObj of XWC_Prop<string,mixed>
+     *
+     * @param  string $prop
+     * @param  mixed  $value
+     * @param  class-string<TObj> $cname Class name to parse the value into.
+     */
+    protected function set_object_prop( string $prop, mixed $value, string $cname = XWC_Prop::class ): void {
+        $data = match ( true ) {
+            \is_array( $value )              => $value,
+            \is_string( $value )             => \json_decode( $value, true ) ?? array(),
+            \is_a( $value, XWC_Prop::class ) => $value,
+            default                          => array(),
+        };
+
+        /**
+         * If the object is not read, we need to get the prop from the data store.
+         *
+         * @var TObj $obj
+         */
+        $obj = $this->get_object_read()
+            ? $this->get_prop( $prop )?->with_data( $data ) ?? new $cname( $data )
+            : new $cname( $data );
+
+        $this->set_wc_data_prop( $prop, $obj );
     }
 
     /**

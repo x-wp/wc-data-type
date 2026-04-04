@@ -28,7 +28,7 @@ class Model_Modifier extends Model {
      * @param  class-string<TDstr>|null $data_store Data store class name.
      * @param  array<string,string|array{
      *   name: string,
-     *   type: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other',
+     *   type: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array_set'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'other'|string|class-string,
      *   default: mixed,
      *   unique: bool,
      *   def_cb?: callable(): mixed,
@@ -38,7 +38,7 @@ class Model_Modifier extends Model {
      *
      * @param  array<string,array{
      *   name: string,
-     *   type: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other',
+     *   type: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array_set'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'other'|string|class-string,
      *   default: mixed,
      *   unique: bool,
      *   required: bool,
@@ -84,9 +84,11 @@ class Model_Modifier extends Model {
 
     protected function scaffold( array $args ): void {
         foreach ( $this->get_definers() as $prop => $setter ) {
-            $this->$prop = $args[ $prop ] || \is_null( $args[ $prop ] )
-                ? $this->$setter( $args[ $prop ] )
-                : $args[ $prop ];
+            if ( ! \array_key_exists( $prop, $args ) ) {
+                continue;
+            }
+
+            $this->$prop = $this->$setter( $args[ $prop ] );
         }
     }
 }

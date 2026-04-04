@@ -100,10 +100,9 @@ class XWC_Object_Query {
             $query['fields']      = 'ids';
 
             $this->query( $query );
-            $this->reset();
         }
 
-        return $this->total;
+        return $this->total ?? 0;
     }
 
     /**
@@ -120,6 +119,7 @@ class XWC_Object_Query {
             'order'       => 'DESC',
             'orderby'     => $this->id_field,
             'page'        => 1,
+            'per_page'    => 20,
         );
 
         $q = \wp_parse_args( $q, $d );
@@ -262,12 +262,10 @@ class XWC_Object_Query {
      * @param array<string,mixed>  $q Query variables.
      */
     protected function init_orderby( array &$c, array $q ): void {
-        $c['orderby'] = 'ORDER BY ';
-
         $c['orderby'] = match ( $q['orderby'] ) {
-            'rand' => 'RAND()',
+            'rand'          => 'RAND()',
             $this->id_field => "{$this->table}.{$this->id_field} {$q['order']}",
-            default => "{$this->table}.{$q['orderby']} {$q['order']}",
+            default         => "{$this->table}.{$q['orderby']} {$q['order']}",
         };
     }
 

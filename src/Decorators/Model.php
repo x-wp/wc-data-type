@@ -40,14 +40,14 @@ class Model {
 
     public string $table;
     public string $data_store;
-    public string $factory;
+    public ?string $factory;
 
     /**
      * Core properties.
      *
      * @var array<string,string|array{
      *   name?: string,
-     *   type: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other',
+     *   type: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array_set'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'other'|string|class-string,
      *   default: mixed,
      *   unique?: bool,
      *   def_cb?: callable(): mixed,
@@ -62,7 +62,7 @@ class Model {
      *
      * @var array<string,array{
      *   name?: string,
-     *   type: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other',
+     *   type: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array_set'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'other'|string|class-string,
      *   default: mixed,
      *   unique?: bool,
      *   required?: bool,
@@ -93,14 +93,14 @@ class Model {
      * @param  string                   $table      Database table name.
      * @param  array<string,string|array{
      *   name?: string,
-     *   type: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other'|string,
+     *   type: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array_set'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'other'|string|class-string,
      *   default?: mixed,
      *   unique?: bool,
      *   def_cb?: callable(): mixed,
      * }>                               $core_props Array of core properties.
      * @param  array<string,array{
      *   name?: string,
-     *   type: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'string'|'other',
+     *   type: 'date_created'|'date_updated'|'date'|'bool'|'bool_int'|'enum'|'term_single'|'term_array'|'array_assoc'|'array_set'|'array'|'binary'|'base64_string'|'json_obj'|'json'|'int'|'float'|'slug'|'other'|string|class-string,
      *   default?: mixed,
      *   unique?: bool,
      *   required?: bool,
@@ -256,11 +256,11 @@ class Model {
      * Set the object factory class name.
      *
      * @param  class-string<TFact>|null $factory Object factory class name.
-     * @return ($factory is null ? class-string<XWC_Object_Factory<TData>> : class-string<TFact>)
+     * @return class-string<TFact>|null
      */
-    protected function set_factory( ?string $factory ): string {
+    protected function set_factory( ?string $factory ): ?string {
         if ( \is_null( $factory ) ) {
-            return XWC_Object_Factory::class;
+            return null;
         }
 
         if ( ! \class_exists( $factory ) ) {
@@ -312,7 +312,11 @@ class Model {
             return null;
         }
 
-        $store ??= XWC_Meta_Store::class;
+        if ( \is_null( $store ) ) {
+            throw new \InvalidArgumentException(
+                \esc_html( "A concrete meta store class must be provided when meta props are defined for '{$this->name}'." ),
+            );
+        }
 
         if ( ! \class_exists( $store ) ) {
             throw new \InvalidArgumentException( \esc_html( "Meta store class $store does not exist." ) );
@@ -410,7 +414,11 @@ class Model {
             ),
         );
 
-        $args['field']   = \preg_replace( '/^id$/', 'term_id', \ltrim( $args['field'], 'term_' ) );
+        $field = $args['field'];
+        $field = \str_starts_with( $field, 'term_' ) ? \substr( $field, 5 ) : $field;
+        $field = 'id' === $field ? 'term_id' : $field;
+
+        $args['field'] = $field;
         $args['default'] = 'array' === $args['return'] ? (array) $args['default'] : $args['default'];
         $args['type']    = \sprintf( 'term_%s|%s|%s', $args['return'], $args['field'], $args['taxonomy'] );
 
