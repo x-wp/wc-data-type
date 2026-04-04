@@ -70,18 +70,19 @@ function xwc_get_object( mixed $id, string $name, int|bool|null $def = false ): 
         return $def;
     }
 
-    return xwc_get_object_factory( $name )->{"get_$name"}( $id ) ?: $def;
+    // @phpstan-ignore return.type
+    return xwc_get_object_factory( $name )->get_object( $id ) ?: $def;
 }
 
 /**
  * Get the class name of a data object by ID and type.
  *
  * @param  int    $id   Object ID.
- * @param  string $name Object type.
+ * @param  string $type Object type.
  * @return class-string<XWC_Data>
  */
-function xwc_get_object_classname( int $id, string $name ): string {
-    return xwc_get_object_factory( $name )->{"get_{$name}_classname"}( $id );
+function xwc_get_object_classname( int $id, string $type ): string {
+    return xwc_get_object_factory( $type )->get_classname( $id ) ?: XWC_Data::class;
 }
 
 /**
@@ -92,9 +93,7 @@ function xwc_get_object_classname( int $id, string $name ): string {
  * @return XWC_Data
  */
 function xwc_get_object_instance( int $id, string $type ): XWC_Data {
-    $classname = xwc_get_object_classname( $id, $type );
-
-    return new $classname( $id );
+    return xwc_get_object_factory( $type )->make_object( $id );
 }
 
 /**

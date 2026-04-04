@@ -50,10 +50,12 @@ trait Prop_Getters {
     protected array $required_data = array();
 
     public function get_prop_group( string $prop ): string {
+        $meta_props = \array_diff_key( $this->data, $this->core_data, $this->extra_data, $this->tax_data );
+
         return match ( true ) {
             isset( $this->core_data[ $prop ] )  => 'core',
             isset( $this->extra_data[ $prop ] ) => 'extra',
-            isset( $this->meta_data[ $prop ] )  => 'meta',
+            isset( $meta_props[ $prop ] )        => 'meta',
             default => 'none',
         };
     }
@@ -268,7 +270,7 @@ trait Prop_Getters {
             return null;
         }
 
-        return \gmdate( 'Y-m-d H:i:s', $value->getOffsetTimestamp() );
+        return \gmdate( 'Y-m-d H:i:s', $value->getTimestamp() );
     }
 
     /**
@@ -346,10 +348,20 @@ trait Prop_Getters {
      * @return string
      */
     protected function get_binary_prop( mixed $value ): string {
-        return ! $this->is_binary_string( $value ) ? \hex2bin( $value ) : $value;
+        if ( $this->is_binary_string( $value ) ) {
+            return $value;
+        }
+
+        $decoded = \hex2bin( (string) $value );
+
+        return false !== $decoded ? $decoded : (string) $value;
     }
 
-    protected function get_base64_string_prop( ?string $value ): string {
+    protected function get_base64_string_prop( ?string $value ): ?string {
+        if ( null === $value ) {
+            return null;
+        }
+
         return ! $this->is_base64_string( $value ) ? \base64_encode( $value ) : $value;
     }
 

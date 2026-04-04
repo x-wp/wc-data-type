@@ -84,9 +84,11 @@ class Model_Modifier extends Model {
 
     protected function scaffold( array $args ): void {
         foreach ( $this->get_definers() as $prop => $setter ) {
-            $this->$prop = $args[ $prop ] || \is_null( $args[ $prop ] )
-                ? $this->$setter( $args[ $prop ] )
-                : $args[ $prop ];
+            if ( ! \array_key_exists( $prop, $args ) ) {
+                continue;
+            }
+
+            $this->$prop = $this->$setter( $args[ $prop ] );
         }
     }
 }

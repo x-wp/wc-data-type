@@ -111,10 +111,32 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
             : $this->set_prop( $prop, $args[0] );
     }
 
+    /**
+     * Serialize the object.
+     *
+     * @return array{id: int}
+     */
+    public function __serialize(): array {
+        return array( 'id' => $this->get_id() );
+    }
+
+    /**
+     * Unserialize the object.
+     *
+     * @param array{id?: int} $data Data to unserialize.
+     */
+    public function __unserialize( array $data ): void {
+        $this
+            ->load_data_store()
+            ->load_object_args()
+            ->load_data( $data['id'] ?? 0 )
+            ->do_actions( $data['id'] ?? 0 );
+    }
+
     public function jsonSerialize(): mixed {
         $data = $this->get_data();
 
-        unset( $data['meta_data'], $data['stats'] );
+        unset( $data['meta_data'] );
 
         return $data;
     }
@@ -190,7 +212,7 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
      *
      * @param  string $name Method name.
      * @param  array<mixed,mixed> $args Method arguments.
-     * @return array{0: string, 1: string, 2: string}}
+     * @return array{0: string, 1: string, 2: string}
      */
     final protected function parse_method_name( string $name, array $args ): array {
         \preg_match( '/^([gs]et)_(.+)$/', $name, $m );
@@ -419,7 +441,7 @@ abstract class XWC_Data extends WC_Data implements XWC_Data_Definition {
     protected function maybe_set_date( string $type, ?string $key = null ): static {
         $prop = $this->get_prop_by_type( "date_{$type}" );
 
-        if ( ! $prop ) {
+        if ( ! $prop || \is_array( $prop ) ) {
             return $this;
         }
 

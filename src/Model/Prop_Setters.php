@@ -20,6 +20,16 @@ use XWC_Prop;
  */
 trait Prop_Setters {
     /**
+     * Whether we are currently inside a set_time_prop → parent::set_date_prop recursion.
+     *
+     * Using an instance property instead of a static variable so that concurrent
+     * calls on different props (or different object instances) cannot interfere.
+     *
+     * @var bool
+     */
+    private bool $time_prop_loop = false;
+
+    /**
      * Get the type of a prop.
      *
      * @param  string $prop Name of prop to get type for.
@@ -30,9 +40,9 @@ trait Prop_Setters {
      */
     abstract protected function get_prop_type( string $prop ): array;
 
-    abstract protected function is_binary_string( string $value ): bool;
+    abstract protected function is_binary_string( ?string $value ): bool;
 
-    abstract protected function is_base64_string( string $value ): bool;
+    abstract protected function is_base64_string( ?string $value ): bool;
 
     /**
      * Set a collection of props in one go, collect any errors, and return the result.
@@ -52,22 +62,15 @@ trait Prop_Setters {
             return $prop_res;
         }
 
-        $save_res = null;
-
         try {
             $save_res = $this->save();
         } catch ( \Throwable $e ) {
-            $save_res = new \WP_Error( 'save_error', $e->getMessage() );
-        } finally {
-            return match ( true ) {
-                0 === $save_res           => new \WP_Error(
-                    'save_error',
-                    'An unknown error occurred while saving.',
-                ),
-                \is_wp_error( $save_res ) => $save_res,
-                default                   => $this,
-            };
+            return new \WP_Error( 'save_error', $e->getMessage() );
         }
+
+        return 0 === $save_res
+            ? new \WP_Error( 'save_error', 'An unknown error occurred while saving.' )
+            : $this;
     }
 
     /**
@@ -95,9 +98,9 @@ trait Prop_Setters {
         [ $type, $sub ] = $this->get_prop_type( $prop );
 
         match ( $type ) {
-            'date_created'  => $this->set_date_prop( $prop, $value ),
-            'date_updated'  => $this->set_date_prop( $prop, $value ),
-            'date'          => $this->set_date_prop( $prop, $value ),
+            'date_created'  => $this->set_time_prop( $prop, $value ),
+            'date_updated'  => $this->set_time_prop( $prop, $value ),
+            'date'          => $this->set_time_prop( $prop, $value ),
             'bool'          => $this->set_bool_prop( $prop, $value ),
             'bool_int'      => $this->set_bool_prop( $prop, $value ),
             'enum'          => $this->set_enum_prop( $prop, $value, ...$sub ),
@@ -154,16 +157,17 @@ trait Prop_Setters {
      * @param  mixed  $value Property value.
      * @return void
      */
-    protected function set_date_prop( $prop, $value ) {
-        static $loop;
+    protected function set_time_prop( $prop, $value ) {
+        if ( ! $this->time_prop_loop ) {
+            if ( \is_string( $value ) && \preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/', $value ) ) {
+                $value = \wc_string_to_timestamp( $value );
+            }
 
-        if ( ! $loop ) {
-            $loop = true;
+            $this->time_prop_loop = true;
             parent::set_date_prop( $prop, $value );
+            $this->time_prop_loop = false;
             return;
         }
-
-        $loop = false;
 
         $this->set_wc_data_prop( $prop, $value );
     }
@@ -194,6 +198,11 @@ trait Prop_Setters {
      * @return void
      */
     protected function set_enum_prop( string $prop, mixed $val, null|string|BackedEnum $type = null ) {
+        if ( null === $type ) {
+            $this->set_wc_data_prop( $prop, $val );
+            return;
+        }
+
         if ( $val instanceof $type ) {
             $this->set_wc_data_prop( $prop, $val );
             return;

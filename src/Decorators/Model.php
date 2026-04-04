@@ -40,7 +40,7 @@ class Model {
 
     public string $table;
     public string $data_store;
-    public string $factory;
+    public ?string $factory;
 
     /**
      * Core properties.
@@ -256,11 +256,11 @@ class Model {
      * Set the object factory class name.
      *
      * @param  class-string<TFact>|null $factory Object factory class name.
-     * @return ($factory is null ? class-string<XWC_Object_Factory<TData>> : class-string<TFact>)
+     * @return class-string<TFact>|null
      */
-    protected function set_factory( ?string $factory ): string {
+    protected function set_factory( ?string $factory ): ?string {
         if ( \is_null( $factory ) ) {
-            return XWC_Object_Factory::class;
+            return null;
         }
 
         if ( ! \class_exists( $factory ) ) {
