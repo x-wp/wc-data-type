@@ -1,0 +1,47 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+      - beta
+      - feat/**
+
+jobs:
+  phpunit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          coverage: none
+
+      - name: Install Composer dependencies
+        uses: ramsey/composer-install@v3
+
+      - name: Install WP-CLI if missing
+        run: |
+          if command -v wp >/dev/null 2>&1; then
+            wp --info
+            exit 0
+          fi
+
+          curl -fsSL -o /tmp/wp-cli.phar https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
+          chmod +x /tmp/wp-cli.phar
+          sudo mv /tmp/wp-cli.phar /usr/local/bin/wp
+          wp --info
+
+      - name: Start test services
+        run: composer test:env:start
+
+      - name: Install WordPress test environment
+        run: composer test:install
+
+      - name: Run PHPUnit
+        run: composer test

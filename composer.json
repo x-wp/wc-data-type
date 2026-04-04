@@ -28,11 +28,13 @@
     "x-wp/di": "^1.0 || ^2.0",
     "oblak/wordpress-coding-standard": "^1",
     "php-stubs/wordpress-stubs": "^6.5",
+    "phpunit/phpunit": "^9.6",
     "phpstan/extension-installer": "^1.3",
     "phpstan/phpstan": "^1.10",
     "phpstan/phpstan-deprecation-rules": "^1.1",
     "swissspidy/phpstan-no-private": "^0.2.0",
-    "szepeviktor/phpstan-wordpress": "^1.3"
+    "szepeviktor/phpstan-wordpress": "^1.3",
+    "yoast/phpunit-polyfills": "^4.0"
   },
   "suggest": {
     "automattic/jetpack-autoloader": "Allow for better interoperability with other plugins that use this package."
@@ -60,5 +62,15 @@
       "phpstan/extension-installer": true
     },
     "platform-check": false
+  },
+  "scripts": {
+    "test:env:start": "docker compose up -d mysql",
+    "test:env:stop": "docker compose down --remove-orphans",
+    "test:install": [
+      "@test:env:start",
+      "bash bin/install-wp-tests.sh"
+    ],
+    "test": "vendor/bin/phpunit",
+    "test:clean": "bash bin/clean-wp-tests.sh"
   }
 }
