@@ -181,15 +181,6 @@ trait Query_Handler {
      * @return array<string,mixed>
      */
     protected function get_meta_query_args( array $vars ): array {
-        $keys = array(
-            'parent',
-            'parent_exclude',
-            'exclude',
-            'limit',
-            'type',
-            'return',
-        );
-
         return parent::get_wp_query_args( $vars );
     }
 

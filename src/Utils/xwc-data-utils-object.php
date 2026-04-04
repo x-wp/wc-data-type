@@ -14,8 +14,14 @@
  * @return T
  */
 function xwc_ds( string $name, string $cn = XWC_Data_Store_XT::class ): XWC_Data_Store_XT {
+    $entity = xwc_get_entity( $name );
+
+    if ( null === $entity ) {
+        throw new \RuntimeException( \esc_html( "Entity '{$name}' is not registered." ) );
+    }
+
     // @phpstan-ignore return.type
-    return xwc_get_entity( $name )->repo;
+    return $entity->repo;
 }
 
 /**
@@ -35,7 +41,13 @@ function xwc_data_store( string $name ): WC_Data_Store {
  * @return XWC_Object_Factory<XWC_Data>
  */
 function xwc_get_object_factory( string $name ): XWC_Object_Factory {
-    return xwc_get_entity( $name )->factory;
+    $entity = xwc_get_entity( $name );
+
+    if ( null === $entity ) {
+        throw new \RuntimeException( \esc_html( "Entity '{$name}' is not registered." ) );
+    }
+
+    return $entity->factory;
 }
 
 /**

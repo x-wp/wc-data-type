@@ -312,7 +312,11 @@ class Model {
             return null;
         }
 
-        $store ??= XWC_Meta_Store::class;
+        if ( \is_null( $store ) ) {
+            throw new \InvalidArgumentException(
+                \esc_html( "A concrete meta store class must be provided when meta props are defined for '{$this->name}'." ),
+            );
+        }
 
         if ( ! \class_exists( $store ) ) {
             throw new \InvalidArgumentException( \esc_html( "Meta store class $store does not exist." ) );
@@ -410,7 +414,11 @@ class Model {
             ),
         );
 
-        $args['field']   = \preg_replace( '/^id$/', 'term_id', \ltrim( $args['field'], 'term_' ) );
+        $field = $args['field'];
+        $field = \str_starts_with( $field, 'term_' ) ? \substr( $field, 5 ) : $field;
+        $field = 'id' === $field ? 'term_id' : $field;
+
+        $args['field'] = $field;
         $args['default'] = 'array' === $args['return'] ? (array) $args['default'] : $args['default'];
         $args['type']    = \sprintf( 'term_%s|%s|%s', $args['return'], $args['field'], $args['taxonomy'] );
 
